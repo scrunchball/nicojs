@@ -140,46 +140,40 @@
         {
           "id": "portrait-01",
           "kind": "image",
-          "note": "Opening portrait, full-bleed, landscape 3:2, 2400px+",
+          "note": "Opening portrait (hero), full-bleed. Close-up, 5:4",
           "size": [
-            2400,
-            1600
+            1920,
+            1536
+          ],
+          "focal": [
+            0.57,
+            0.42
           ]
         },
         {
           "id": "portrait-02",
           "kind": "image",
-          "note": "Behind the camera, 1st of 4 (with bio line 1), portrait 4:5",
+          "note": "Behind the camera, 1st picture (bio lines 1-2). Reading in the director's chair, 5:4",
           "size": [
-            1600,
-            2000
+            1500,
+            1200
+          ],
+          "focal": [
+            0.48,
+            0.68
           ]
         },
         {
           "id": "portrait-03",
           "kind": "image",
-          "note": "Behind the camera, 2nd of 4 (bio line 2), portrait 4:5",
+          "note": "Behind the camera, 2nd picture (bio lines 3-4). Standing by the director's chair, 3:2",
           "size": [
-            1600,
-            2000
-          ]
-        },
-        {
-          "id": "portrait-04",
-          "kind": "image",
-          "note": "Behind the camera, 3rd of 4 (bio line 3), portrait 4:5",
-          "size": [
-            1600,
-            2000
-          ]
-        },
-        {
-          "id": "portrait-05",
-          "kind": "image",
-          "note": "Behind the camera, 4th of 4 (bio line 4), portrait 4:5",
-          "size": [
-            1600,
-            2000
+            1920,
+            1280
+          ],
+          "focal": [
+            0.5,
+            0.42
           ]
         }
       ]

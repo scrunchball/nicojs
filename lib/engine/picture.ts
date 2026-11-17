@@ -60,7 +60,8 @@ ${COMMON_GLSL}
 uniform sampler2D uTex;
 uniform float uWipe;      // shutter wipe inside the picture: -1 off, else the edge 0..1 from the top
 uniform vec4 uRect;       // picture rect in screen uv (x, y, w, h), origin bottom-left
-uniform vec2 uUvScale;    // cover crop for full-bleed
+uniform vec2 uUvScale;    // cover crop (full-bleed, and windows whose shape differs from the picture)
+uniform vec2 uFocal;      // crop offset towards the subject, uv units
 uniform vec2 uShift;      // weave shift inside the picture (full-bleed only), local uv
 uniform float uOverscan;  // 1% for full-bleed so weave never shows an edge
 uniform float uRot;       // radians
@@ -99,7 +100,7 @@ void main() {
   ap = vec2(co * ap.x - s * ap.y, s * ap.x + co * ap.y);
   c = ap / uRectPx;
   c *= (1.0 - uOverscan) * uUvScale / uZoom;
-  vec3 pic = texture2D(uTex, c + 0.5).rgb;
+  vec3 pic = texture2D(uTex, c + 0.5 + uFocal).rgb;
 
   if (uDevelop < 0.5 || uProgress >= 0.9999) { gl_FragColor = vec4(pic * uFade + wipeLine + shutterLine(px), alpha); return; }
 
@@ -197,6 +198,8 @@ export type Slot = {
   /** Push-in zoom (default 1) and fade to black (default 1 = no fade). */
   zoom?: number;
   fade?: number;
+  /** Subject position (0..1 from the top-left) that crops keep in frame. */
+  focal?: [number, number];
   /** Clip to the reel container; rolling-shutter reveal (1 = revealed); shutter wipe inside the picture (-1 = off). */
   box?: Box | null;
   reveal?: number;
@@ -266,16 +269,21 @@ export class PictureEngine {
       for (const s of slots) {
         const r = s.rect;
         const dxPx = s.weave.x * r.h, dyPx = s.weave.y * r.h; // weave is a fraction of picture height
+        // cover crop: the part of the picture that fills the rect, shifted towards the subject (never past an edge)
+        const ra = r.w / r.h;
+        const sx = ra > s.aspect ? 1 : ra / s.aspect, sy = ra > s.aspect ? s.aspect / ra : 1;
+        const [fx, fy] = s.focal ?? [0.5, 0.5];
+        const clampOff = (v: number, room: number) => Math.max(-room, Math.min(room, v));
+        p.f("uFocal", clampOff(fx - 0.5, (1 - sx) / 2), clampOff(0.5 - fy, (1 - sy) / 2)); // texture y runs upward
         if (s.full) {
-          const ra = r.w / r.h; // cover crop
-          p.f("uUvScale", ra > s.aspect ? 1 : ra / s.aspect, ra > s.aspect ? s.aspect / ra : 1)
+          p.f("uUvScale", sx, sy)
             .f("uRect", r.x / vw, 1 - (r.y + r.h) / vh, r.w / vw, r.h / vh)
             .f("uShift", dxPx / r.w, dyPx / r.h)
             .f("uOverscan", 0.02) // room for weave + mouse parallax without showing an edge
             .f("uRot", (s.weave.rot * Math.PI) / 180);
         } else {
           // windows: the whole window moves, edges included
-          p.f("uUvScale", 1, 1)
+          p.f("uUvScale", sx, sy)
             .f("uRect", (r.x + dxPx) / vw, 1 - (r.y + r.h - dyPx) / vh, r.w / vw, r.h / vh)
             .f("uShift", 0, 0).f("uOverscan", 0).f("uRot", 0);
         }

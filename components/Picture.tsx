@@ -17,7 +17,9 @@ export function Picture({ shot, priority = false, sizes }: { shot: Shot; priorit
     "data-shot": shot.id,
     "data-mode": shot.composition === "full-bleed" ? "full" : "window",
     "data-develop": priority ? "timer" : undefined,
+    "data-focal": shot.focal ? shot.focal.join(",") : undefined,
   };
+  const focalPos = shot.focal ? `${shot.focal[0] * 100}% ${shot.focal[1] * 100}%` : undefined;
   if (shot.kind === "loop" || shot.kind === "film") {
     // a quiet background loop: the Projector plays it on the picture canvas while its beat is on screen
     return (
@@ -66,7 +68,10 @@ export function Picture({ shot, priority = false, sizes }: { shot: Shot; priorit
       alt={shot.alt}
       width={shot.width}
       height={shot.height}
-      style={shot.lqip ? { backgroundImage: `url(${shot.lqip})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+      style={{
+        ...(shot.lqip ? { backgroundImage: `url(${shot.lqip})`, backgroundSize: "cover", backgroundPosition: focalPos ?? "center" } : {}),
+        ...(focalPos ? { objectPosition: focalPos } : {}),
+      }}
       loading={priority ? "eager" : "lazy"}
       fetchPriority={priority ? "high" : undefined}
       decoding="async"

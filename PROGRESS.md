@@ -94,6 +94,10 @@ Not yet / caveats:
 - Real GPU timings still need a real Mac and phone (open the site with the PROYECTOR on and scroll the whole film).
 - Real frames must go through `python3 scripts/encode-media.py` (Claude does this when they arrive).
 
+### First real material (D-65..D-67)
+- Nico's three portraits are in: the close-up is the opening hero; the other two carry Behind the camera. Focal points keep faces in frame on every crop. Checked on desktop and iPhone; no errors.
+- Open question for Adam: on desktop the name prints across the hero's face (the brief says text never over a face). Options: keep it (poster-like), or set the name smaller on the lower-third line.
+
 ## Not started
 404 + Impressum/privacy; accessibility + SEO pass (screen reader, metadata, sitemap, social images); launch (domain, R2 for the films, headers, monitoring). Backend (CMS) to be decided., 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 

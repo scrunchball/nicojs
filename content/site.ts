@@ -20,6 +20,8 @@ export type Shot = {
   scrub?: string;
   width: number;
   height: number;
+  /** Where the picture's subject is (0..1 from the top-left); crops keep it in frame. */
+  focal?: [number, number];
   /** Responsive WebP variants and a tiny inline preview (scripts/encode-media.py). */
   srcSet?: string;
   lqip?: string;
@@ -58,7 +60,7 @@ export type Film = {
 };
 
 /* ---------- media: content/media.json is the single list of files (see docs/MEDIA.md) ---------- */
-type MediaShot = { id: string; kind: Shot["kind"]; size?: [number, number] };
+type MediaShot = { id: string; kind: Shot["kind"]; size?: [number, number]; focal?: [number, number] };
 const folders = (media as unknown as { folders: Record<string, { size: [number, number]; shots: MediaShot[] }> }).folders;
 
 function shot(folder: string, id: string, alt: string, composition: Composition, side?: "left" | "right"): Shot {
@@ -69,7 +71,7 @@ function shot(folder: string, id: string, alt: string, composition: Composition,
   const base = `/media/${folder}/${id}`;
   const v = (variants as Record<string, { w: number[]; lqip: string }>)[`${folder}/${id}`];
   return {
-    id, kind: m.kind, src: `${base}.jpg`, width, height, alt, composition, side,
+    id, kind: m.kind, src: `${base}.jpg`, width, height, alt, composition, side, ...(m.focal ? { focal: m.focal } : {}),
     ...(v ? { srcSet: v.w.map((w) => `${base}-${w}.webp ${w}w`).join(", "), lqip: v.lqip } : {}),
     ...(m.kind === "clip" ? { loop: `${base}.mp4`, scrub: `${base}-scrub.mp4` } : {}),
     ...(m.kind === "loop" || m.kind === "film" ? { loop: `${base}.mp4` } : {}),
@@ -148,12 +150,10 @@ export const films: Film[] = [
 
 export const portraits = {
   opening: shot("portraits", "portrait-01", "Portrait of Nicolás J. Scatamacchia", "full-bleed"),
-  /** Behind the camera: one image per bio line, each rolling in on a shutter and developing. */
+  /** Behind the camera: the bio lines share these pictures in order; each new one rolls in on a shutter and develops. */
   sequence: [
-    shot("portraits", "portrait-02", "Nicolás J. Scatamacchia on set", "small-window", "left"),
-    shot("portraits", "portrait-03", "Nicolás J. Scatamacchia", "small-window", "left"),
-    shot("portraits", "portrait-04", "Nicolás J. Scatamacchia behind the camera", "small-window", "left"),
-    shot("portraits", "portrait-05", "Nicolás J. Scatamacchia", "small-window", "left"),
+    shot("portraits", "portrait-02", "Nicolás J. Scatamacchia reading a script in a director's chair", "small-window", "left"),
+    shot("portraits", "portrait-03", "Nicolás J. Scatamacchia on set beside the director's chair", "small-window", "left"),
   ],
 };
 

@@ -133,8 +133,8 @@ export function Screening() {
       <section id="about" className="scene" data-scene="about" aria-label="About" data-rest="40">
         <Frame beat="seq" hold="seq" n={site.bio.length} className="frame--seq">
           <div className="seq-window window window--small">
-            {portraits.sequence.slice(0, site.bio.length).map((p, k) => (
-              <div className="seq-pic" data-seq-pic={k} key={p.id}><Picture shot={p} sizes="(max-width: 809px) 64vw, 30vw" /></div>
+            {portraits.sequence.map((p, k) => (
+              <div className="seq-pic" data-seq-pic={k} key={p.id}><Picture shot={p} sizes="(max-width: 809px) 86vw, 42vw" /></div>
             ))}
           </div>
           <div className="seq-lines">

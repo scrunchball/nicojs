@@ -26,8 +26,8 @@ Clips need encoding (see below), so send those to Claude.
 | | `btf-06.jpg` | Closing pair, image 2 |
 | | `btf-loop.mp4` | Watch beat: a short loop behind the button (6–10 s, no text, no sound) |
 | | `btf-film.mp4` | The film for the player (5–10 min: goes to R2, see below) |
-| `portraits` | `portrait-01.jpg` | Opening portrait, full-bleed, landscape (3:2), 2400px+ |
-| | `portrait-02.jpg` … `portrait-05.jpg` | Behind the camera: four portraits (4:5), one per bio line, in order |
+| `portraits` | `portrait-01.jpg` | Opening portrait (hero), full-bleed. **In: Nico's close-up** |
+| | `portrait-02.jpg`, `portrait-03.jpg` | Behind the camera, in order (the four bio lines share them). More can be added (`portrait-04`, …): add them to `content/media.json` |
 | `laurels` | `wei-1.svg` … `wei-5.svg` | Laurels for What Else is There?, in the order of its awards (Berlin Short Film Festival, Berlin Commercial Awards, Flickers' Rhode Island, LA Experimental Forum, Hollywood New Directors) |
 | | `btf-1.svg` … `btf-4.svg` | Laurels for By the Fire (FHIFF winner, Berlin Commercial Awards, Awareness Festival, FHIFF selection) |
 
@@ -36,6 +36,9 @@ Laurels: SVG or transparent PNG. If one is a PNG, send it to Claude (the path ch
 **The films (5–10 min)** are 150–400 MB, over Cloudflare Pages' 25 MiB per-file limit. They go on Cloudflare R2
 (free up to 10 GB, serves MP4 with seeking); the player then points at the R2 URL. Send the masters to Claude
 for a 1080p web encode (H.264, ~6 Mbps, AAC audio).
+
+## Focal points
+Each picture can have `"focal": [x, y]` in `content/media.json` (0..1 from the top-left): where the subject is. Crops keep it in frame, which matters most on portrait phones.
 
 ## After adding or replacing frames
 ```bash

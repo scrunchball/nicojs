@@ -345,6 +345,7 @@ export function Projector() {
             tex: s.tex, aspect: s.aspect,
             rect: full ? { x: r.left, y: r.top, w: r.width, h: r.height } : { x: r.left + px, y: r.top + py, w: r.width, h: r.height },
             full, weave: full ? { ...wv, x: wv.x + px / r.height, y: wv.y - py / r.height } : wv,
+            focal: s.el.dataset.focal ? (s.el.dataset.focal.split(",").map(Number) as [number, number]) : undefined,
             progress, develop: progress < 1, dye: CONFIG.dye, zoom: extra.zoom ?? st.zoom, fade: st.fade * st.beat.dim,
             box: reelBox, reveal, wipe: extra.wipe,
           });
@@ -352,21 +353,25 @@ export function Projector() {
         };
         const seq = st?.beat.seq;
         if (st && seq) {
-          // Behind the camera: one picture per line. A rolling shutter brings the next one in as blank paper,
-          // then it develops; the line beside it changes with it.
-          const n = seq.lines.length;
+          // Behind the camera: the lines share the pictures in order (4 lines, 2 pictures => 2 lines each). When a
+          // line brings a new picture, a rolling shutter brings it in as blank paper and it develops; otherwise the
+          // picture holds while the line beside it changes.
+          const n = seq.lines.length, np = Math.max(1, seq.shots.length);
           const k = Math.min(n - 1, Math.floor(st.q * n));
           const local = st.q * n - k;
           const sub = (st.beat.end - st.beat.start) / n / PX_PER_FRAME;
-          const cur = shots.find((x) => x.el === seq.shots[k]);
-          const prev = k > 0 ? shots.find((x) => x.el === seq.shots[k - 1]) : undefined;
+          const imgOf = (line: number) => Math.min(np - 1, Math.floor((line * np) / n));
+          const ki = imgOf(k);
+          const fresh = k === 0 || imgOf(k - 1) !== ki; // this line brings a new picture
+          const cur = shots.find((x) => x.el === seq.shots[ki]);
+          const prev = fresh && k > 0 ? shots.find((x) => x.el === seq.shots[imgOf(k - 1)]) : undefined;
           const wipeT = 0.22;
-          const dev = !motion ? 1 : k === 0 ? Math.min(1, st.q * n / 0.45) : Math.min(1, Math.max(0, (local - 0.06) / 0.5));
+          const dev = !motion || !fresh ? 1 : k === 0 ? Math.min(1, local / 0.45) : Math.min(1, Math.max(0, (local - 0.06) / 0.5));
           if (prev && local < wipeT && motion) {
             push(prev, 1, { zoom: 1 });
             if (cur) push(cur, dev, { wipe: local / wipeT, zoom: 1 });
           } else if (cur) push(cur, dev, { zoom: 1 });
-          seq.pics.forEach((p, i) => { if (i === k) p.dataset.current = "1"; else delete p.dataset.current; });
+          seq.pics.forEach((p, i) => { if (i === ki) p.dataset.current = "1"; else delete p.dataset.current; });
           seq.lines.forEach((l, i) => {
             let o = 0;
             if (i === k) {

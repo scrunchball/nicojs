@@ -230,7 +230,8 @@ html.film .roll-list { position: absolute; left: 0; right: 0; top: 0; will-chang
 
 /* ---------- Behind the camera: one centred picture, its lines beside it ---------- */
 .frame--seq { display: grid; grid-template-columns: auto 36ch; gap: var(--s6); place-content: center; align-items: center; }
-.seq-window { position: relative; width: min(30vw, calc(70svh * 0.8)); margin: 0; padding: 0; }
+.seq-window { position: relative; width: min(42vw, calc(58svh * 1.25)); margin: 0; padding: 0; }
+html.film .seq-pic .pic { height: 100%; object-fit: cover; } /* later pictures fill the first one's shape (cover, around their focal point) */
 .seq-pic + .seq-pic { margin-top: var(--s3); }
 .seq-lines { display: grid; gap: var(--s3); }
 html.film .seq-pic + .seq-pic { margin-top: 0; }
@@ -239,7 +240,7 @@ html.film .seq-pic:first-child { position: relative; }
 html.film .seq-pic:not([data-current]) .pic { visibility: hidden; }
 html.film .seq-lines { display: grid; }
 html.film .seq-line { grid-area: 1 / 1; opacity: 0; }
-@media (max-width: 809px) { .frame--seq { grid-template-columns: 1fr; gap: var(--s4); justify-items: center; } .seq-window { width: 64vw; } }
+@media (max-width: 809px) { .frame--seq { grid-template-columns: 1fr; gap: var(--s4); justify-items: center; } .seq-window { width: 86vw; } }
 
 /* ---------- End title: Let's / make / the  —  next / one. ---------- */
 .end-title { max-width: none !important; text-align: center; }
@@ -335,7 +336,7 @@ html.film .frame-slot[data-active] > .frame { transform: translate3d(var(--par-x
   .frame--corner > .corner-text { margin: var(--s1) var(--s2) 0; }
   .frame--corner-right > .corner-text { text-align: right; justify-self: end; }
   .frame--seq { grid-template-columns: auto 34ch; gap: var(--s5); justify-items: initial; }
-  .seq-window { width: calc(62svh * 0.8); }
+  .seq-window { width: calc(58svh * 1.25); }
   html.film .roll-title { top: 9svh; }
   html.film .roll-box { top: 26svh; height: 62svh; }
   .roll-list { gap: var(--s4); }
