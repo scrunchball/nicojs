@@ -86,6 +86,7 @@ Done (D-58..D-64):
 - JS before interaction ~144 KB gzip (budget 180). Responsive WebP + inline blurred previews for every picture.
 - Adaptive quality, data-saver light mode, software-GPU fallback to the plain page.
 - Phones: INDEX menu, type minimums, tap targets, landscape layer; checked on iPhone 13, a 360px Android, iPhone landscape and iPad: no sideways scroll, nothing important off screen, INDEX and the player work. Fixed spacers swallowing taps.
+- Whole-film re-check on the new engine (699 samples, every 2 film frames): 1 screen at a time; at most 2 pictures (the closing pair, by design) and 2 text groups (Festival circuit title + box, by design). Flash: largest 2-frame change 0.14, 3 changes >= 0.1, 0 opposing pairs within 1 s of film (passes WCAG 2.3.1). No errors.
 - Measured (local, uncompressed server): mobile with 4x CPU slowdown + slow 4G: FCP/LCP 1.0 s (LCP is the name, real text), CLS 0.001, TBT 157 ms. Desktop: LCP 0.2 s, CLS 0.04, TBT 57 ms.
 
 Not yet / caveats:
