@@ -77,8 +77,16 @@ Not yet / caveats:
 ### Stage 6 corrections, round 2 (Adam's review), done
 - Closing pair with image 2 (D-52), festival rows spaced with centred leaders, more glow on the name, centred player controls with edge-to-edge video (D-55), menu landings that cut through black (D-53), mouse parallax (D-54). Fixed: full-frame reel pictures took their intrinsic width in the DOM (now sized to the container).
 
+- The email is the last screen (D-56). No film pages (D-57).
+
+## Measured before the performance stage (static build, Stage 6)
+- JS before interaction: ~155 KB gzip for modern browsers (194 KB incl. the 39 KB legacy polyfill only old browsers fetch). Budget 180 KB.
+- Lazy after first paint: three.js chunk 185 KB gzip; lenis + engine ~12 KB.
+- Grain: 3 MB per density, fetched on load. Biggest single cost, worst on phones.
+- HTML 8.6 KB gzip. Placeholder media 2.6 MB (real frames will be larger; no srcset/AVIF yet).
+
 ## Not started
-Stage 7 film pages and credits, 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
+Stage 7 (now: 404 + Impressum/privacy only), 10 responsive and fallbacks, 11 performance/accessibility/SEO, 12 launch. Backend (CMS) to be decided., 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 
 ## Waiting on Adam / Nico
 - Cloudflare account and Pages connection.

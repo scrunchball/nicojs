@@ -145,7 +145,7 @@ export function Screening() {
         </Frame>
       </section>
 
-      {/* 7. End title: cut to red; "Let's / make / the / next one." one word per beat */}
+      {/* 7. End title: cut to red; "Let's / make / the / next one." one word per beat; the email is the last screen */}
       <section id="contact" className="scene" data-scene="end" aria-label="Contact" data-rest="0">
         <Frame beat="text" hold="t-five" className="frame--red frame--center">
           <p className="title end-title" data-weave="title" data-build="words">
@@ -163,9 +163,6 @@ export function Screening() {
             <p className="label">{site.getInTouch.toUpperCase()}</p>
             <a className="intertitle link" href={`mailto:${site.email}`}>{site.email}</a>
           </div>
-        </Frame>
-        <Frame beat="text" hold="t-long" className="frame--rest frame--center">
-          <p className="label silver">{t("markers.end")}</p>
         </Frame>
       </section>
     </main>

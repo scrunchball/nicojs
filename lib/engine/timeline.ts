@@ -145,7 +145,10 @@ export function compile(root: HTMLElement, vh: number, width: number): { beats: 
       });
     });
   }
-  beats.forEach((b, i) => { b.fadeOut = b.red && !beats[i + 1]?.red; });
+  // a red screen followed by black fades down; the final screen never does: it holds to the end of the page
+  beats.forEach((b, i) => { b.fadeOut = b.red && !!beats[i + 1] && !beats[i + 1].red; });
+  const last = beats[beats.length - 1];
+  if (last) last.restEnd = Infinity;
   return { beats, total: document.documentElement.scrollHeight };
 }
 
@@ -162,6 +165,10 @@ export function evaluate(beats: Beat[], scrollY: number, reduced: boolean): Beat
   const b = beats[idx];
   if (y >= b.restEnd) return null; // past this scene's rest: black
   const len = Math.max(1, b.end - b.start);
+  if (y >= b.end && b.restEnd === Infinity) {
+    // the final screen holds through the end of the page
+    return { beat: b, q: 1, opacity: 1, screen: 1, develop: 1, zoom: 1, fade: 1 };
+  }
 
   if (y >= b.end) {
     // in the black rest after the scene: the last beat goes down through black in stepped frames
