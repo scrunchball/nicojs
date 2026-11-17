@@ -15,7 +15,7 @@ const FADE_SHARE = 0.6; // a scene fades to black over the first 60% of its rest
 
 const HOLD_VH: Record<string, number> = {
   short: 40, normal: 60, long: 90,
-  "t-short": 30, "t-normal": 45, "t-long": 60,
+  "t-short": 30, "t-normal": 45, "t-long": 60, "t-triple": 135,
 };
 
 export type Beat = {
@@ -38,6 +38,8 @@ export type Beat = {
   develops: boolean;
   lastInScene: boolean;
   red: boolean;
+  /** A red screen followed by black: the whole screen goes down through black at the end of its hold. */
+  fadeOut: boolean;
 };
 
 export type BeatState = {
@@ -46,6 +48,8 @@ export type BeatState = {
   q: number;
   /** Text opacity (stepped arrive/leave), and the scene's fade to black during a rest. */
   opacity: number;
+  /** Opacity of the whole screen, background included (1 except red screens fading to black). */
+  screen: number;
   /** Picture: development progress (1 = developed), push-in zoom, fade. */
   develop: number;
   zoom: number;
@@ -114,9 +118,11 @@ export function compile(root: HTMLElement, vh: number, width: number): { beats: 
         develops: kind === "picture" && (firstInScene || !prev || prev.kind !== "picture"),
         lastInScene: last,
         red: slot.querySelector(".frame--red") !== null,
+        fadeOut: false,
       });
     });
   }
+  beats.forEach((b, i) => { b.fadeOut = b.red && !beats[i + 1]?.red; });
   return { beats, total: document.documentElement.scrollHeight };
 }
 
@@ -140,7 +146,7 @@ export function evaluate(beats: Beat[], scrollY: number, reduced: boolean): Beat
     const fadeLen = restLen * FADE_SHARE;
     const fade = reduced ? 0 : Math.max(0, 1 - Math.floor((y - b.end) / PX_PER_FRAME) * PX_PER_FRAME / fadeLen);
     if (fade <= 0) return null;
-    return { beat: b, q: 1, opacity: fade, develop: 1, zoom: 1 + PUSH_IN, fade };
+    return { beat: b, q: 1, opacity: fade, screen: 1, develop: 1, zoom: 1 + PUSH_IN, fade };
   }
 
   const q = (y - b.start) / len;
@@ -153,8 +159,11 @@ export function evaluate(beats: Beat[], scrollY: number, reduced: boolean): Beat
     if (b.kind === "text" && !b.lastInScene) opacity = Math.min(opacity, framesLeft / LEAVE_FRAMES);
   }
   const develop = b.develops && !reduced ? Math.min(1, q / DEVELOP_SHARE) : 1;
+  // red -> black: the screen goes down through black in stepped frames over the last 35% of the hold
+  let screen = 1;
+  if (b.fadeOut && !reduced && q > 0.65) screen = Math.max(0, 1 - Math.floor((q - 0.65) * len / PX_PER_FRAME) * PX_PER_FRAME / (0.35 * len));
   const zoom = b.shot instanceof HTMLImageElement && !reduced ? 1 + PUSH_IN * q : 1;
-  return { beat: b, q, opacity, develop, zoom, fade: 1 };
+  return { beat: b, q, opacity, screen, develop, zoom, fade: 1 };
 }
 
 /** HH:MM:SS:FF at 24 fps for a scroll position. */

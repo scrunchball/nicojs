@@ -148,3 +148,9 @@ html.film .frame--roll { display: block; padding: 0; overflow: hidden;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 24%, #000 76%, transparent 100%);
           mask-image: linear-gradient(to bottom, transparent 0%, #000 24%, #000 76%, transparent 100%); }
 html.film .roll { position: absolute; left: var(--margin); right: var(--margin); top: 0; will-change: transform; }
+
+/* ---------- Stage 6: text arrives inside its screen; the screen itself cuts (so red cuts in, never fades in) ---------- */
+html.film .frame-slot[data-active] > .frame { opacity: var(--screen, 1); }
+html.film .frame-slot > .frame > * { opacity: var(--o, 1); }
+html.film .frame-slot > .frame--bleed > .frame > * { opacity: 1; } /* the name inside the opening has its own build */
+.ltr { display: inline; }

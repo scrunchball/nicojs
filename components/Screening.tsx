@@ -9,7 +9,7 @@ function WithItalicEnd({ text }: { text: string }) {
   return (<>{m[1]}<em>{m[2]}</em>{m[3]}</>);
 }
 
-type Hold = "short" | "normal" | "long" | "t-short" | "t-normal" | "t-long" | "roll";
+type Hold = "short" | "normal" | "long" | "t-short" | "t-normal" | "t-long" | "t-triple" | "roll";
 
 /**
  * One beat of the film. Without JavaScript it is a plain screen-height frame (fallback level 5).
@@ -35,7 +35,7 @@ export function Screening() {
         <Frame beat="picture" hold="long" className="frame--bleed">
           <Picture shot={portraits.opening} priority />
           <div className="frame frame--center" style={{ position: "relative", background: "transparent" }}>
-            <h1 id="h1" className="name" data-weave="title">{site.name}</h1>
+            <h1 id="h1" className="name" data-weave="title" data-build="print" data-frames="18" data-clock="opening">{site.name}</h1>
           </div>
         </Frame>
         <Frame beat="text" hold="t-long" className="frame--center frame--rest">
@@ -50,7 +50,7 @@ export function Screening() {
       <section className="scene" data-scene="statement" aria-label="Statement">
         {site.statement.map((line, i) => (
           <Frame beat="text" hold={i === site.statement.length - 1 ? "t-long" : "t-normal"} className="frame--rest frame--center" key={line}>
-            <p className="intertitle" data-weave="title" style={{ maxWidth: "16ch" }}>
+            <p className="intertitle" data-weave="title" data-build={i === site.statement.length - 1 ? "late" : undefined} style={{ maxWidth: "16ch" }}>
               {i === site.statement.length - 1 ? <WithItalicEnd text={line} /> : line}
             </p>
           </Frame>
@@ -64,7 +64,7 @@ export function Screening() {
             <Frame beat="text" hold="t-long" className="frame--center">
               <div className="marker-row" data-weave="title">
                 <p className="label silver">{t("markers.reel")} {i + 1}</p>
-                <h2 id={`film-${film.slug}`} className="title">{film.title}</h2>
+                <h2 id={`film-${film.slug}`} className="title" data-build="print" data-frames="14">{film.title}</h2>
               </div>
             </Frame>
             <Frame beat="text" hold="t-short" className="frame--center frame--rest">
@@ -94,7 +94,7 @@ export function Screening() {
       {/* 5. Festival circuit */}
       <section className="scene" data-scene="circuit" aria-labelledby="circuit">
         <Frame beat="text" hold="t-long" className="frame--rest frame--center">
-          <h2 id="circuit" className="intertitle" data-weave="title">Festival <em>circuit</em></h2>
+          <h2 id="circuit" className="intertitle" data-weave="title" data-build="print" data-frames="14">Festival <em>circuit</em></h2>
         </Frame>
         {/* one credit roll per film: the title, then its awards rolling up out of darkness and into it */}
         {films.map((film) => (
@@ -134,8 +134,13 @@ export function Screening() {
 
       {/* 7. End title */}
       <section id="contact" className="scene" data-scene="end" aria-label="Contact" data-rest="0">
-        <Frame beat="text" hold="t-long" className="frame--red frame--center">
-          <p className="title" data-weave="title">{site.endTitle.join(" ")}</p>
+        {/* cut to red; "Let's make the next one." sets word by word over 3 beats */}
+        <Frame beat="text" hold="t-triple" className="frame--red frame--center">
+          <p className="title" data-weave="title" data-build="words">
+            {site.endTitle.map((w, k) => (
+              <span key={w} data-word>{w}{k < site.endTitle.length - 1 ? " " : ""}</span>
+            ))}
+          </p>
         </Frame>
         <Frame beat="text" hold="t-long" className="frame--red frame--rest frame--center">
           <div className="stack" style={{ justifyItems: "center" }}>

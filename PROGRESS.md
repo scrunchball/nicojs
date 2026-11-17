@@ -39,7 +39,7 @@ Not yet / caveats:
 - Development on scroll, cuts, scrub and the PROYECTOR motion toggle are Stage 5. Clips loop for now.
 - All media are placeholders until Adam uploads Nico's frames and clips.
 
-## Stage 5: Timeline and cuts (branch `stage-05-timeline`): built, awaiting Adam's review
+## Stage 5: Timeline and cuts: approved ("good enough, refine later"), carried into Stage 6
 Done:
 - Film mode: the page plays as one pinned film; scroll is the projector. 46 beats compiled from the DOM (holds per the brief, phone 70% / tablet 85% lengths), rests of black between scenes.
 - Moves: develop (first picture of a scene and any picture after text/black, over the first 45% of the hold), cut (instant, on a film frame), push-in (stills 1.00 -> 1.04), scrub (all-intra encode, clip time = hold progress, holds the last frame), arrive (6 stepped frames) / leave (4), fade to black through the rest. Scrolling back runs it in reverse.
@@ -56,8 +56,21 @@ Not yet / caveats:
 - Reels shortened to 5 beats each (D-34). Festival circuit as one credit roll per film with laurel placeholders (D-35). Background motif per scene (D-36).
 - The screening is now 29 beats, ~2,200vh including the end runway.
 
+## Stage 6: Transitions and titles (branch `stage-06-titles`): built, awaiting Adam's review
+Done:
+- Nico's name prints in over 18 film frames in an uneven order during the portrait's develop, holds, then fades as the visitor moves on.
+- Film titles and "Festival circuit" print letter by letter on scroll (14 frames).
+- Statement: "Imagine what's" arrives, *next* arrives last; the rest leaves and *next* holds alone.
+- End title: single cut to red; "Let's / make the / next one." set over 3 beats; the email on its own beat; red goes down through black; END alone on black.
+- Pacing pass checks over the whole film (740 samples, every 2 film frames): never more than 1 screen, 1 picture, 1 text group at once. Flash check: largest 2-frame change 0.16 relative luminance, 3 changes >= 0.1 in the whole film, 0 opposing pairs within 1 s of film (WCAG 2.3.1 general flash passes).
+- Recording and build stills in `docs/stage-06/`.
+
+Not yet / caveats:
+- Interface fades already use 200 ms with the projector ease (cubic-bezier); no CustomEase needed (no GSAP, D-27).
+- Laurels, frames and portraits are still placeholders.
+
 ## Not started
-Stage 6 transitions and titles, 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
+Stage 7 film pages and credits, 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 
 ## Waiting on Adam / Nico
 - Cloudflare account and Pages connection.

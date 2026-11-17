@@ -22,6 +22,7 @@ import type { PictureEngine } from "@/lib/engine/picture";
 import type { GrainEngine } from "@/lib/engine/grain";
 import { PX_PER_FRAME, compile, evaluate, timecode, type Beat } from "@/lib/engine/timeline";
 import { MOTIFS } from "@/lib/engine/motifs";
+import { applyBuild, completeBuild, prepareBuilds, type Build } from "@/lib/engine/builds";
 
 const CONFIG = {
   grain: { strength: 0.06, density: 2, scale: 1 },
@@ -80,6 +81,8 @@ export function Projector() {
     let dirty = true;
     let resizeTimer = 0;
     let motifTime = 0; // advances only while motion is on
+    let builds: (Build & { beat?: Beat })[] = [];
+    const NAME_PRINT_AT = 0.35; // the name starts printing once the portrait's shadows are up
 
     const tcEl = document.querySelector<HTMLElement>("[data-timecode]");
     const toggle = document.querySelector<HTMLButtonElement>("[data-projector-toggle]");
@@ -177,6 +180,7 @@ export function Projector() {
       const prev = active ? { i: active.index, q: (window.scrollY - active.start) / Math.max(1, active.end - active.start) } : null;
       const out = compile(main, vh, window.innerWidth);
       beats = out.beats;
+      for (const bd of builds) bd.beat = beats.find((b) => b.frame.contains(bd.el));
       const old = new Map(shots.map((s) => [s.el, s]));
       shots = beats.filter((b) => b.shot).map((b) => {
         const s = old.get(b.shot!);
@@ -197,7 +201,11 @@ export function Projector() {
 
     const setActive = (b: Beat | null) => {
       if (b === active) return;
-      if (active) { delete active.slot.dataset.active; active.frame.style.opacity = ""; }
+      if (active) {
+        delete active.slot.dataset.active;
+        active.frame.style.removeProperty("--o");
+        active.frame.style.removeProperty("--screen");
+      }
       active = b;
       if (b) b.slot.dataset.active = "1";
       root.classList.toggle("on-red", !!b?.red);
@@ -229,7 +237,10 @@ export function Projector() {
 
       const st = evaluate(beats, y, !motion || reduced);
       setActive(st?.beat ?? null);
-      if (st) st.beat.frame.style.opacity = String(st.opacity);
+      if (st) {
+        st.beat.frame.style.setProperty("--o", String(st.opacity));
+        st.beat.frame.style.setProperty("--screen", String(st.screen));
+      }
       // credit roll: the title starts centred and everything travels up 1:1 with scroll, stepped per film frame
       if (st?.beat.roll && (moved || dirty)) {
         const yq = yFrame * PX_PER_FRAME;
@@ -275,6 +286,27 @@ export function Projector() {
         }
         if (shot?.timer && shot.drawn) pending();
         dirty = false;
+      }
+
+      // title builds in the playing beat: on the opening's clock (the name) or on scroll (everything else)
+      if (st && (filmTick || moved)) {
+        const b = st.beat;
+        const beatFrames = Math.max(1, (b.end - b.start) / PX_PER_FRAME);
+        const framesIn = Math.floor((Math.min(y, b.end) - b.start) / PX_PER_FRAME);
+        for (const bd of builds) {
+          if (bd.beat !== b) continue;
+          if (!motion) { completeBuild(bd); bd.el.style.opacity = ""; continue; }
+          if (bd.el.dataset.clock === "opening") {
+            const portrait = shots.find((x) => x.timer);
+            const startMs = portrait && portrait.developStart > 0 ? portrait.developStart + NAME_PRINT_AT * CONFIG.openingDevelopMs : Infinity;
+            applyBuild(bd, Math.floor(((now - startMs) / 1000) * FPS), st.q, beatFrames);
+            // the name holds while the portrait finishes developing, then fades as the visitor moves on
+            const out = st.q > 0.5 ? Math.max(0, 1 - Math.floor((st.q - 0.5) * beatFrames) / 6) : 1;
+            bd.el.style.opacity = out === 1 ? "" : String(out);
+          } else {
+            applyBuild(bd, framesIn, st.q, beatFrames);
+          }
+        }
       }
 
       if (filmTick) {
@@ -328,6 +360,7 @@ export function Projector() {
         }
         lost = false;
         root.classList.add("projector-on", "film");
+        builds = prepareBuilds(main);
         build();
         lastFilm = -1; lastY = -1; lastW = window.innerWidth; lastH = window.innerHeight; dirty = true;
         syncToggle();
@@ -347,7 +380,14 @@ export function Projector() {
       clearTimeout(resizeTimer);
       for (const s of shots) release(s);
       setActive(null);
-      for (const b of beats) { b.slot.style.height = ""; b.frame.style.opacity = ""; delete b.slot.dataset.near; }
+      for (const bd of builds) { bd.restore(); bd.el.style.opacity = ""; }
+      builds = [];
+      for (const b of beats) {
+        b.slot.style.height = "";
+        b.frame.style.removeProperty("--o");
+        b.frame.style.removeProperty("--screen");
+        delete b.slot.dataset.near;
+      }
       for (const sec of main.querySelectorAll<HTMLElement>("section.scene")) sec.style.paddingBottom = "";
       main.style.paddingBottom = "";
       for (const el of main.querySelectorAll<HTMLElement>("[data-weave]")) el.style.transform = "";
