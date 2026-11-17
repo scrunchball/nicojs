@@ -2,7 +2,8 @@
  * The timeline (Stage 5). Compiles the screening's beats ([.frame-slot] in DOM order) into scroll ranges,
  * and evaluates what is on screen at any scroll position. Pure layout + maths: no rendering here.
  *
- * Holds (brief: Motion and the edit): pictures Short 40vh / Normal 60vh / Long 90vh; text 30-60vh;
+ * Holds (brief: Motion and the edit): pictures Short 40vh / Normal 60vh / Long 90vh; text 30-60vh; credit rolls
+ * as long as their content (they move 1:1 with scroll);
  * rests of black between scenes 20-40vh. 1 film frame = 8 px of scroll; every change lands on a frame.
  */
 export const PX_PER_FRAME = 8;
@@ -23,6 +24,12 @@ export type Beat = {
   frame: HTMLElement; // the pinned screen
   kind: "picture" | "text";
   shot: HTMLImageElement | HTMLVideoElement | null;
+  /** Credit roll (Festival circuit): the track that moves up 1:1 with scroll, and its title's height. */
+  roll: HTMLElement | null;
+  rollTitle: number;
+  /** Scene name (section data-scene) and where the scene starts, for its background motif. */
+  scene: string;
+  sceneStart: number;
   start: number; // px
   end: number; // px
   /** End of the black rest that follows (equals end when the next beat follows directly). */
@@ -59,7 +66,13 @@ export function compile(root: HTMLElement, vh: number, width: number): { beats: 
   for (const sec of sections) {
     const slots = Array.from(sec.querySelectorAll<HTMLElement>(".frame-slot"));
     slots.forEach((slot) => {
-      const len = Math.round(((HOLD_VH[slot.dataset.hold ?? "normal"] ?? 60) * vh * scale) / 100 / PX_PER_FRAME) * PX_PER_FRAME;
+      let len = Math.round(((HOLD_VH[slot.dataset.hold ?? "normal"] ?? 60) * vh * scale) / 100 / PX_PER_FRAME) * PX_PER_FRAME;
+      const roll = slot.querySelector<HTMLElement>("[data-roll]");
+      if (roll) {
+        // the title starts centred and the whole roll travels up and out of the top: 1:1 with scroll
+        const title = roll.firstElementChild as HTMLElement | null;
+        len = Math.round((roll.offsetHeight + vh * 0.5 + (title?.offsetHeight ?? 0) / 2) / PX_PER_FRAME) * PX_PER_FRAME;
+      }
       slot.style.height = `${len}px`;
     });
     const rest = Number(sec.dataset.rest ?? 30);
@@ -74,9 +87,12 @@ export function compile(root: HTMLElement, vh: number, width: number): { beats: 
     const slots = Array.from(sec.querySelectorAll<HTMLElement>(".frame-slot"));
     const secRect = sec.getBoundingClientRect();
     const secEnd = Math.round(secRect.bottom + y0);
+    const sceneStart = Math.round(secRect.top + y0);
+    const scene = sec.dataset.scene ?? "";
     slots.forEach((slot, i) => {
       const r = slot.getBoundingClientRect();
       const kind = slot.dataset.beat === "picture" ? "picture" : "text";
+      const roll = slot.querySelector<HTMLElement>("[data-roll]");
       const prev = beats[beats.length - 1];
       const firstInScene = i === 0;
       const last = i === slots.length - 1;
@@ -88,6 +104,10 @@ export function compile(root: HTMLElement, vh: number, width: number): { beats: 
         frame: slot.querySelector<HTMLElement>(":scope > .frame")!,
         kind,
         shot: slot.querySelector<HTMLImageElement | HTMLVideoElement>("[data-shot]"),
+        roll,
+        rollTitle: (roll?.firstElementChild as HTMLElement | null)?.offsetHeight ?? 0,
+        scene,
+        sceneStart,
         start,
         end,
         restEnd: last ? secEnd : end,

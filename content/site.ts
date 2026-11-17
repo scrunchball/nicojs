@@ -29,6 +29,8 @@ export type Recognition = {
   festival: string;
   year?: number;
   note?: string;
+  /** Festival laurel beside the award (SVG or transparent PNG) under /public. */
+  laurel?: string;
 };
 
 export type Film = {
@@ -41,9 +43,7 @@ export type Film = {
   link: { href: string };
   /** Key image, full-bleed, carries the first synopsis sentence as its subtitle. */
   keyShot: Shot;
-  /** Cut through after the key image (one of them a clip). */
-  shots: Shot[];
-  /** The last shot, after the second sentence. */
+  /** The last shot, with the second sentence beside it. */
   lastShot: Shot;
   recognition: Recognition[];
 };
@@ -97,18 +97,13 @@ export const films: Film[] = [
     ],
     link: { href: "https://berlincommercial.awardsengine.com/winners/2025/personal-work#193614" },
     keyShot: shot("what-else-is-there", "wei-01", "Frame from What Else is There?", "full-bleed"),
-    shots: [
-      shot("what-else-is-there", "wei-02", "Frame from What Else is There?", "large-window", "right"),
-      shot("what-else-is-there", "wei-03", "Frame from What Else is There?", "small-window", "left"),
-      shot("what-else-is-there", "wei-04", "Clip from What Else is There?", "large-window", "right"),
-    ],
     lastShot: shot("what-else-is-there", "wei-05", "Frame from What Else is There?", "large-window", "left"),
     recognition: [
-      { kind: "Opening film", festival: "Berlin Short Film Festival", year: 2026 },
-      { kind: "Shortlisted", festival: "Berlin Commercial Awards", year: 2025, note: "Personal Work – Experimental" },
-      { kind: "Semi-Finalist", festival: "Flickers’ Rhode Island International Film Festival", year: 2026 },
-      { kind: "Honorable Mention", festival: "Los Angeles Experimental Forum", year: 2026 },
-      { kind: "Honorable Mention", festival: "Hollywood New Directors", year: 2026 },
+      { kind: "Opening film", festival: "Berlin Short Film Festival", year: 2026, laurel: "/media/laurels/wei-1.svg" },
+      { kind: "Shortlisted", festival: "Berlin Commercial Awards", year: 2025, note: "Personal Work – Experimental", laurel: "/media/laurels/wei-2.svg" },
+      { kind: "Semi-Finalist", festival: "Flickers’ Rhode Island International Film Festival", year: 2026, laurel: "/media/laurels/wei-3.svg" },
+      { kind: "Honorable Mention", festival: "Los Angeles Experimental Forum", year: 2026, laurel: "/media/laurels/wei-4.svg" },
+      { kind: "Honorable Mention", festival: "Hollywood New Directors", year: 2026, laurel: "/media/laurels/wei-5.svg" },
     ],
   },
   {
@@ -122,17 +117,12 @@ export const films: Film[] = [
     ],
     link: { href: "https://berlincommercial.awardsengine.com/winners/2026#208868" },
     keyShot: shot("by-the-fire", "btf-01", "Frame from By the Fire", "full-bleed"),
-    shots: [
-      shot("by-the-fire", "btf-02", "Frame from By the Fire", "large-window", "left"),
-      shot("by-the-fire", "btf-03", "Frame from By the Fire", "small-window", "right"),
-      shot("by-the-fire", "btf-04", "Clip from By the Fire", "large-window", "left"),
-    ],
     lastShot: shot("by-the-fire", "btf-05", "Frame from By the Fire", "large-window", "right"),
     recognition: [
-      { kind: "Winner, Best Cinematography", festival: "FHIFF (Italy)" },
-      { kind: "Official Selection", festival: "Berlin Commercial Awards", year: 2026, note: "Cultural Work" },
-      { kind: "Opening film", festival: "Awareness Festival (California, USA)" },
-      { kind: "Official Selection", festival: "FHIFF (Italy)" },
+      { kind: "Winner, Best Cinematography", festival: "FHIFF (Italy)", laurel: "/media/laurels/btf-1.svg" },
+      { kind: "Official Selection", festival: "Berlin Commercial Awards", year: 2026, note: "Cultural Work", laurel: "/media/laurels/btf-2.svg" },
+      { kind: "Opening film", festival: "Awareness Festival (California, USA)", laurel: "/media/laurels/btf-3.svg" },
+      { kind: "Official Selection", festival: "FHIFF (Italy)", laurel: "/media/laurels/btf-4.svg" },
     ],
   },
 ];

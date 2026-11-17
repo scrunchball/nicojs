@@ -21,6 +21,7 @@ import { FPS, WEAVE, frameAt, weave } from "@/lib/engine/film";
 import type { PictureEngine } from "@/lib/engine/picture";
 import type { GrainEngine } from "@/lib/engine/grain";
 import { PX_PER_FRAME, compile, evaluate, timecode, type Beat } from "@/lib/engine/timeline";
+import { MOTIFS } from "@/lib/engine/motifs";
 
 const CONFIG = {
   grain: { strength: 0.06, density: 2, scale: 1 },
@@ -78,6 +79,7 @@ export function Projector() {
     let lastFilm = -1, lastY = -1, lastW = 0, lastH = 0, lastTc = -1;
     let dirty = true;
     let resizeTimer = 0;
+    let motifTime = 0; // advances only while motion is on
 
     const tcEl = document.querySelector<HTMLElement>("[data-timecode]");
     const toggle = document.querySelector<HTMLButtonElement>("[data-projector-toggle]");
@@ -228,6 +230,11 @@ export function Projector() {
       const st = evaluate(beats, y, !motion || reduced);
       setActive(st?.beat ?? null);
       if (st) st.beat.frame.style.opacity = String(st.opacity);
+      // credit roll: the title starts centred and everything travels up 1:1 with scroll, stepped per film frame
+      if (st?.beat.roll && (moved || dirty)) {
+        const yq = yFrame * PX_PER_FRAME;
+        st.beat.roll.style.transform = `translate3d(0, ${Math.round(vh * 0.5 - st.beat.rollTitle / 2 - (yq - st.beat.start))}px, 0)`;
+      }
 
       if (tcEl && yFrame !== lastTc) { tcEl.textContent = timecode(y); lastTc = yFrame; }
 
@@ -254,7 +261,14 @@ export function Projector() {
             });
           }
         }
-        pic.frame(draw);
+        // the scene's background motif: fades in over the scene's first 30vh, out with the scene through its rest
+        let bg = null;
+        const motif = st ? MOTIFS[st.beat.scene] : undefined;
+        if (st && motif) {
+          const env = Math.min(1, Math.max(0, (y - st.beat.sceneStart) / (vh * 0.3))) * st.fade;
+          bg = { ...motif, intensity: motif.intensity * env, time: motifTime };
+        }
+        pic.frame(draw, bg);
         if (draw.length && shot && !shot.drawn) {
           shot.drawn = true;
           shot.el.dataset.ready = "1"; // the canvas has it now: fade the DOM picture out
@@ -264,6 +278,7 @@ export function Projector() {
       }
 
       if (filmTick) {
+        if (motion && lastFilm >= 0) motifTime += (film - lastFilm) / FPS;
         if (film % Math.round(FPS / grainFps) === 0) grain.render(film, { ...CONFIG.grain, still: !motion });
         if (active) {
           const tw = motion ? weave(WEAVE.title, film) : { x: 0, y: 0 }, sw = motion ? weave(WEAVE.subtitle, film) : { x: 0, y: 0 };

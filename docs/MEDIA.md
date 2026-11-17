@@ -14,19 +14,21 @@ Clips need encoding (see below), so send those to Claude.
 
 | Folder | File | What goes there |
 |---|---|---|
-| `what-else-is-there` | `wei-01.jpg` | Key image, full-bleed |
-| | `wei-02.jpg` | Large window, right (also in the opening) |
-| | `wei-03.jpg` | Small window, left |
-| | `wei-04.mp4` (+ `-scrub.mp4`, `.jpg` poster) | The clip, large window, right |
-| | `wei-05.jpg` | Last shot, large window, left |
-| `by-the-fire` | `btf-01.jpg` | Key image, full-bleed |
-| | `btf-02.jpg` | Large window, left (also in the opening) |
-| | `btf-03.jpg` | Small window, right |
-| | `btf-04.mp4` (+ `-scrub.mp4`, `.jpg` poster) | The clip, large window, left |
-| | `btf-05.jpg` | Last shot, large window, right |
+| `what-else-is-there` | `wei-01.jpg` | Key image, full-bleed, with the first line of the synopsis |
+| | `wei-02.jpg` | Opening: large window, right |
+| | `wei-05.jpg` | Last shot: large window, with the second sentence beside it |
+| `by-the-fire` | `btf-01.jpg` | Key image, full-bleed, with the first line of the synopsis |
+| | `btf-02.jpg` | Opening: small window, left |
+| | `btf-05.jpg` | Last shot: large window, with the second sentence beside it |
 | `portraits` | `portrait-01.jpg` | Opening portrait, full-bleed, landscape (3:2), 2400px+ |
 | | `portrait-02.jpg` | Behind the camera, small window, portrait (4:5) |
 | | `portrait-03.jpg` | Second portrait, small window, portrait (4:5), B&W-friendly |
+| `laurels` | `wei-1.svg` … `wei-5.svg` | Laurels for What Else is There?, in the order of its awards (Berlin Short Film Festival, Berlin Commercial Awards, Flickers' Rhode Island, LA Experimental Forum, Hollywood New Directors) |
+| | `btf-1.svg` … `btf-4.svg` | Laurels for By the Fire (FHIFF winner, Berlin Commercial Awards, Awareness Festival, FHIFF selection) |
+
+Laurels: SVG or transparent PNG. If one is a PNG, send it to Claude (the path changes from `.svg` to `.png`).
+
+The reels no longer use clips (Stage 5 corrections). The scrub engine stays in place for later, e.g. the film player.
 
 ## Specs (from the brief)
 - **Frames:** clean frame grabs from the graded master. No titles, subtitles, credits or posters.

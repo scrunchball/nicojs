@@ -90,6 +90,43 @@ void main() {
 
 export type Rect = { x: number; y: number; w: number; h: number };
 
+const BG_FRAG = /* glsl */ `
+precision highp float;
+uniform vec3 uColor;
+uniform float uIntensity;
+uniform float uTime;
+uniform float uMode;
+uniform vec2 uRes;
+varying vec2 vUv;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.02; a *= 0.5; } return v; }
+void main() {
+  vec2 uv = vUv; float asp = uRes.x / uRes.y; vec2 p = vec2(uv.x * asp, uv.y);
+  float m = 0.0;
+  if (uMode < 1.5) {        // safelight breathing up from below the frame, 9 s cycle
+    float d = length((uv - vec2(0.5, -0.2)) * vec2(0.55 / max(asp, 1.0) * asp, 1.0));
+    m = smoothstep(1.15, 0.0, d) * (0.7 + 0.3 * sin(uTime * 6.2831 / 9.0));
+  } else if (uMode < 2.5) { // haze drifting slowly sideways
+    m = smoothstep(0.35, 0.85, fbm(p * 1.4 + vec2(uTime * 0.018, uTime * 0.005)));
+  } else if (uMode < 3.5) { // embers: haze rising from the bottom
+    m = smoothstep(0.42, 0.9, fbm(p * 2.0 + vec2(0.0, -uTime * 0.035))) * smoothstep(1.05, 0.0, uv.y);
+  } else if (uMode < 4.5) { // soft bands passing upward, like a reel
+    m = smoothstep(0.45, 0.95, fbm(vec2(p.x * 1.1, p.y * 2.6 - uTime * 0.05))) * 0.85;
+  } else {                  // a pool of tungsten light, barely moving
+    float d = length((uv - vec2(0.32 + 0.04 * sin(uTime * 0.1), 0.55)) * vec2(asp, 1.0));
+    m = smoothstep(0.95, 0.0, d) * (0.85 + 0.15 * fbm(p * 2.0 + uTime * 0.02));
+  }
+  float k = clamp(m * uIntensity, 0.0, 1.0);
+  gl_FragColor = vec4(uColor * k, k); // premultiplied: a faint veil of the motif colour over Gate black
+}
+`;
+
+export type Background = { mode: number; color: [number, number, number]; intensity: number; time: number };
+
 /** One picture to draw this frame, at a rect in CSS px relative to the canvas (the viewport). */
 export type Slot = {
   tex: T.Texture;
@@ -110,6 +147,8 @@ export class PictureEngine {
   private scene: T.Scene;
   private camera: T.Camera;
   private mat: T.ShaderMaterial;
+  private bgScene: T.Scene;
+  private bgMat: T.ShaderMaterial;
   private tex: T.Texture | null = null; // lab: the single loaded source
   private aspect = 16 / 9;
   readonly timer: GpuTimer;
@@ -146,6 +185,22 @@ export class PictureEngine {
       },
     });
     this.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.mat));
+    this.bgMat = new THREE.ShaderMaterial({
+      vertexShader: VERT,
+      fragmentShader: BG_FRAG,
+      blending: THREE.NoBlending,
+      depthTest: false,
+      depthWrite: false,
+      uniforms: {
+        uColor: { value: new THREE.Vector3(1, 1, 1) },
+        uIntensity: { value: 0 },
+        uTime: { value: 0 },
+        uMode: { value: 2 },
+        uRes: { value: new THREE.Vector2(1, 1) },
+      },
+    });
+    this.bgScene = new THREE.Scene();
+    this.bgScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.bgMat));
     this.timer = new GpuTimer(this.renderer.getContext() as WebGL2RenderingContext);
     this.resize();
   }
@@ -178,13 +233,22 @@ export class PictureEngine {
   /** Upload a texture now (so the first draw never stalls mid-scroll). */
   upload(tex: T.Texture) { this.renderer.initTexture(tex); }
 
-  /** Draw every visible slot. An empty list clears the canvas. */
-  frame(slots: Slot[]) {
+  /** Draw the scene's background motif (optional), then every visible slot. Nothing to draw clears the canvas. */
+  frame(slots: Slot[], bg?: Background | null) {
     const t0 = performance.now();
     const vw = this.canvas.clientWidth, vh = this.canvas.clientHeight;
     const u = this.mat.uniforms;
     this.timer.measure(() => {
       this.renderer.clear();
+      if (bg && bg.intensity > 0.0005) {
+        const b = this.bgMat.uniforms;
+        b.uColor.value.set(...bg.color);
+        b.uIntensity.value = bg.intensity;
+        b.uTime.value = bg.time;
+        b.uMode.value = bg.mode;
+        b.uRes.value.set(vw, vh);
+        this.renderer.render(this.bgScene, this.camera);
+      }
       for (const s of slots) {
         const r = s.rect;
         const dxPx = s.weave.x * r.h, dyPx = s.weave.y * r.h; // weave is a fraction of picture height
@@ -244,5 +308,5 @@ export class PictureEngine {
     }]);
   }
 
-  dispose() { this.tex?.dispose(); this.mat.dispose(); this.renderer.dispose(); }
+  dispose() { this.tex?.dispose(); this.mat.dispose(); this.bgMat.dispose(); this.renderer.dispose(); }
 }

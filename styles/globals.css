@@ -121,3 +121,30 @@ html.projector-on .projector-static { display: none; }
 /* Chrome over the red end title: Bone, with the active item in Ink (Safelight on red would vanish) */
 html.on-red .chrome a, html.on-red .chrome-projector, html.on-red .chrome-nav .langs { color: var(--bone); }
 html.on-red .chrome-nav a[aria-current="true"], html.on-red .chrome-nav a:hover { color: var(--ink-on-red); }
+
+/* ---------- Reel: the last shot with the second sentence beside it ---------- */
+.frame--pair { display: grid; align-items: center; column-gap: var(--s5); padding: 0 8vw; }
+.frame--pair-left { grid-template-columns: 58fr 32fr; grid-template-areas: "pic text"; }
+.frame--pair-right { grid-template-columns: 32fr 58fr; grid-template-areas: "text pic"; }
+.frame--pair .window { grid-area: pic; width: 100%; margin: 0; justify-self: stretch; padding-block: 0; }
+.frame--pair .window .pic { max-height: 76svh; object-fit: contain; }
+.frame--pair .pair-text { grid-area: text; max-width: 36ch; }
+.frame--pair-right .pair-text { justify-self: end; }
+@media (max-width: 809px) {
+  .frame--pair, .frame--pair-left, .frame--pair-right { grid-template-columns: 1fr; grid-template-areas: "pic" "text"; row-gap: var(--s3); padding: var(--s6) var(--margin); align-content: center; }
+}
+
+/* ---------- Festival circuit: a credit roll per film ---------- */
+.frame--roll { padding: var(--s6) var(--margin); }
+.roll { display: grid; justify-items: center; gap: var(--s6); }
+.roll-title { font-size: var(--t-intertitle); text-align: center; }
+.roll-list { list-style: none; display: grid; gap: var(--s6); width: min(760px, 100%); }
+.roll-item { display: grid; grid-template-columns: 96px 1fr; gap: var(--s4); align-items: center; }
+.laurel { width: 96px; height: 96px; object-fit: contain; }
+.roll .festival { font-family: var(--font-serif); font-size: clamp(28px, 3.2vw, 48px); line-height: 1.05; }
+@media (max-width: 809px) { .roll-item { grid-template-columns: 64px 1fr; gap: var(--s3); } .laurel { width: 64px; height: 64px; } }
+/* film mode: the roll moves up through a window that fades into darkness top and bottom */
+html.film .frame--roll { display: block; padding: 0; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 24%, #000 76%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 24%, #000 76%, transparent 100%); }
+html.film .roll { position: absolute; left: var(--margin); right: var(--margin); top: 0; will-change: transform; }

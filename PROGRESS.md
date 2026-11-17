@@ -52,6 +52,10 @@ Not yet / caveats:
 - Scrub clips are fetched once into memory (blob) so seeking works even where the server ignores range requests (Cloudflare Pages answered 200 with the whole file in testing).
 - Name build, intertitle/festival/end-title builds and the pacing pass are Stage 6.
 
+### Stage 5 corrections (Adam's review), done
+- Reels shortened to 5 beats each (D-34). Festival circuit as one credit roll per film with laurel placeholders (D-35). Background motif per scene (D-36).
+- The screening is now 29 beats, ~2,200vh including the end runway.
+
 ## Not started
 Stage 6 transitions and titles, 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 

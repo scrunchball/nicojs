@@ -9,7 +9,7 @@ function WithItalicEnd({ text }: { text: string }) {
   return (<>{m[1]}<em>{m[2]}</em>{m[3]}</>);
 }
 
-type Hold = "short" | "normal" | "long" | "t-short" | "t-normal" | "t-long";
+type Hold = "short" | "normal" | "long" | "t-short" | "t-normal" | "t-long" | "roll";
 
 /**
  * One beat of the film. Without JavaScript it is a plain screen-height frame (fallback level 5).
@@ -17,7 +17,7 @@ type Hold = "short" | "normal" | "long" | "t-short" | "t-normal" | "t-long";
  * and the inner .frame is pinned to the screen, shown only while its beat plays.
  */
 function Frame({ beat, hold, className = "", children, style }: {
-  beat: "picture" | "text"; hold: Hold; className?: string; children: React.ReactNode; style?: React.CSSProperties;
+  beat: "picture" | "text" | "roll"; hold: Hold; className?: string; children: React.ReactNode; style?: React.CSSProperties;
 }) {
   return (
     <div className="frame-slot" data-beat={beat} data-hold={hold}>
@@ -31,7 +31,7 @@ export function Screening() {
   return (
     <main id="content">
       {/* 1. Opening */}
-      <section id="top" className="scene" aria-labelledby="h1">
+      <section id="top" className="scene" data-scene="opening" aria-labelledby="h1">
         <Frame beat="picture" hold="long" className="frame--bleed">
           <Picture shot={portraits.opening} priority />
           <div className="frame frame--center" style={{ position: "relative", background: "transparent" }}>
@@ -47,7 +47,7 @@ export function Screening() {
       </section>
 
       {/* 2. Intertitle */}
-      <section className="scene" aria-label="Statement">
+      <section className="scene" data-scene="statement" aria-label="Statement">
         {site.statement.map((line, i) => (
           <Frame beat="text" hold={i === site.statement.length - 1 ? "t-long" : "t-normal"} className="frame--rest frame--center" key={line}>
             <p className="intertitle" data-weave="title" style={{ maxWidth: "16ch" }}>
@@ -60,7 +60,7 @@ export function Screening() {
       {/* 3 & 4. Reels */}
       <div id="films">
         {films.map((film, i) => (
-          <section className="scene" key={film.slug} aria-labelledby={`film-${film.slug}`}>
+          <section className="scene" data-scene={film.slug} key={film.slug} aria-labelledby={`film-${film.slug}`}>
             <Frame beat="text" hold="t-long" className="frame--center">
               <div className="marker-row" data-weave="title">
                 <p className="label silver">{t("markers.reel")} {i + 1}</p>
@@ -74,13 +74,11 @@ export function Screening() {
               <Picture shot={film.keyShot} />
               <div className="caption" data-weave="subtitle"><p className="subtitle">{film.synopsis[0]}</p></div>
             </Frame>
-            {film.shots.map((s) => (
-              <Frame beat="picture" hold={s.kind === "clip" ? "long" : "normal"} key={s.id}><Window shot={s} /></Frame>
-            ))}
-            <Frame beat="text" hold="t-long" className="frame--text frame--center">
-              <p className="subtitle block" data-weave="subtitle" style={{ maxWidth: "44ch" }}>{film.synopsis[1]}</p>
+            {/* the last shot with the second sentence beside it, on the opposite side */}
+            <Frame beat="picture" hold="normal" className={`frame--pair frame--pair-${film.lastShot.side ?? "left"}`}>
+              <Window shot={film.lastShot} />
+              <p className="subtitle pair-text" data-weave="subtitle">{film.synopsis[1]}</p>
             </Frame>
-            <Frame beat="picture" hold="normal"><Window shot={film.lastShot} /></Frame>
             <Frame beat="text" hold="t-long" className="frame--center frame--rest">
               <div className="stack" style={{ justifyItems: "center" }}>
                 <a className="label link" href={film.link.href} rel="noopener" target="_blank">
@@ -94,32 +92,37 @@ export function Screening() {
       </div>
 
       {/* 5. Festival circuit */}
-      <section className="scene" aria-labelledby="circuit">
+      <section className="scene" data-scene="circuit" aria-labelledby="circuit">
         <Frame beat="text" hold="t-long" className="frame--rest frame--center">
           <h2 id="circuit" className="intertitle" data-weave="title">Festival <em>circuit</em></h2>
         </Frame>
+        {/* one credit roll per film: the title, then its awards rolling up out of darkness and into it */}
         {films.map((film) => (
-          <div key={film.slug}>
-            <Frame beat="text" hold="t-normal" className="frame--rest frame--center">
-              <p className="title" data-weave="title" style={{ fontSize: "var(--t-intertitle)" }}>{film.title}</p>
-            </Frame>
-            {film.recognition.map((r) => (
-              <Frame beat="text" hold="t-short" className="frame--rest frame--text" key={`${film.slug}-${r.kind}-${r.festival}`}>
-                <div className="recognition" data-weave="subtitle">
-                  <p className="label silver">{r.kind.toUpperCase()}</p>
-                  <p className="festival">{r.festival}</p>
-                  {(r.year || r.note) && (
-                    <p className="body silver">{[r.year, r.note].filter(Boolean).join(" · ")}</p>
-                  )}
-                </div>
-              </Frame>
-            ))}
-          </div>
+          <Frame beat="roll" hold="roll" className="frame--roll" key={film.slug}>
+            <div className="roll" data-roll>
+              <p className="title roll-title" data-weave="title">{film.title}</p>
+              <ul className="roll-list">
+                {film.recognition.map((r) => (
+                  <li className="roll-item" key={`${r.kind}-${r.festival}`}>
+                    {r.laurel && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="laurel" src={r.laurel} alt="" width={96} height={96} loading="lazy" decoding="async" />
+                    )}
+                    <div className="roll-text">
+                      <p className="label silver">{r.kind.toUpperCase()}</p>
+                      <p className="festival">{r.festival}</p>
+                      {(r.year || r.note) && <p className="body silver">{[r.year, r.note].filter(Boolean).join(" · ")}</p>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Frame>
         ))}
       </section>
 
       {/* 6. Behind the camera */}
-      <section id="about" className="scene" aria-label="About" data-rest="40">
+      <section id="about" className="scene" data-scene="about" aria-label="About" data-rest="40">
         <Frame beat="picture" hold="normal"><Window shot={portraits.behind} /></Frame>
         {site.bio.map((line) => (
           <Frame beat="text" hold="t-normal" className="frame--rest frame--text" key={line}>
@@ -130,7 +133,7 @@ export function Screening() {
       </section>
 
       {/* 7. End title */}
-      <section id="contact" className="scene" aria-label="Contact" data-rest="0">
+      <section id="contact" className="scene" data-scene="end" aria-label="Contact" data-rest="0">
         <Frame beat="text" hold="t-long" className="frame--red frame--center">
           <p className="title" data-weave="title">{site.endTitle.join(" ")}</p>
         </Frame>
