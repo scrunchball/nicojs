@@ -1,10 +1,26 @@
 {
   "skip": "Saltar al contenido",
-  "nav": { "films": "PELÍCULAS", "about": "SOBRE MÍ", "contact": "CONTACTO" },
-  "markers": { "reel": "ROLLO", "end": "FIN", "projector": "PROYECTOR", "sound": "SONIDO", "index": "ÍNDICE", "lost": "ROLLO PERDIDO" },
-  "labels": { "viewFilm": "VER LA PELÍCULA", "berlinCommercial": "BERLIN COMMERCIAL AWARDS" },
+  "nav": {
+    "films": "PELÍCULAS",
+    "about": "SOBRE MÍ",
+    "contact": "CONTACTO"
+  },
+  "markers": {
+    "reel": "ROLLO",
+    "end": "FIN",
+    "projector": "PROYECTOR",
+    "sound": "SONIDO",
+    "index": "ÍNDICE",
+    "lost": "ROLLO PERDIDO"
+  },
+  "labels": {
+    "viewFilm": "VER LA PELÍCULA",
+    "berlinCommercial": "BERLIN COMMERCIAL AWARDS",
+    "watch": "VER LA PELÍCULA"
+  },
   "meta": {
     "title": "Nicolás J. Scatamacchia · Director de cine, Berlín",
     "description": "Berlin-based director making films about hope and beauty. Selected two years in a row by Berlin Commercial Awards."
-  }
+  },
+  "language": "Idioma"
 }

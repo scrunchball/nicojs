@@ -10,7 +10,8 @@ export type Composition = "full-bleed" | "large-window" | "small-window";
 
 export type Shot = {
   id: string;
-  kind: "image" | "clip";
+  /** image; clip (scrubbed by scroll); loop (plays in the background); film (the player's source). */
+  kind: "image" | "clip" | "loop" | "film";
   /** Image (or clip poster) under /public. */
   src: string;
   /** Clips only: loop encode and all-intra scrub encode. */
@@ -45,11 +46,14 @@ export type Film = {
   keyShot: Shot;
   /** The last shot, with the second sentence beside it. */
   lastShot: Shot;
+  /** Watch beat: a short background loop, and the film the custom player plays. */
+  loop: Shot;
+  film: Shot;
   recognition: Recognition[];
 };
 
 /* ---------- media: content/media.json is the single list of files (see docs/MEDIA.md) ---------- */
-type MediaShot = { id: string; kind: "image" | "clip"; size?: [number, number] };
+type MediaShot = { id: string; kind: Shot["kind"]; size?: [number, number] };
 const folders = (media as unknown as { folders: Record<string, { size: [number, number]; shots: MediaShot[] }> }).folders;
 
 function shot(folder: string, id: string, alt: string, composition: Composition, side?: "left" | "right"): Shot {
@@ -61,6 +65,7 @@ function shot(folder: string, id: string, alt: string, composition: Composition,
   return {
     id, kind: m.kind, src: `${base}.jpg`, width, height, alt, composition, side,
     ...(m.kind === "clip" ? { loop: `${base}.mp4`, scrub: `${base}-scrub.mp4` } : {}),
+    ...(m.kind === "loop" || m.kind === "film" ? { loop: `${base}.mp4` } : {}),
   };
 }
 
@@ -75,7 +80,8 @@ export const site = {
     "Zero budget, both times.",
     "Imagine what’s next.",
   ],
-  endTitle: ["Let’s", "make the", "next one."],
+  /** Set one word per beat; "next one." on the second line. */
+  endTitle: ["Let’s", "make", "the", "next", "one."],
   bio: [
     "I’m a Latino director, born in Argentina and based in Berlin.",
     "After years in production, I now direct full-time.",
@@ -98,6 +104,8 @@ export const films: Film[] = [
     link: { href: "https://berlincommercial.awardsengine.com/winners/2025/personal-work#193614" },
     keyShot: shot("what-else-is-there", "wei-01", "Frame from What Else is There?", "full-bleed"),
     lastShot: shot("what-else-is-there", "wei-05", "Frame from What Else is There?", "large-window", "left"),
+    loop: shot("what-else-is-there", "wei-loop", "What Else is There?, a moment from the film", "full-bleed"),
+    film: shot("what-else-is-there", "wei-film", "What Else is There?", "full-bleed"),
     recognition: [
       { kind: "Opening film", festival: "Berlin Short Film Festival", year: 2026, laurel: "/media/laurels/wei-1.svg" },
       { kind: "Shortlisted", festival: "Berlin Commercial Awards", year: 2025, note: "Personal Work – Experimental", laurel: "/media/laurels/wei-2.svg" },
@@ -118,6 +126,8 @@ export const films: Film[] = [
     link: { href: "https://berlincommercial.awardsengine.com/winners/2026#208868" },
     keyShot: shot("by-the-fire", "btf-01", "Frame from By the Fire", "full-bleed"),
     lastShot: shot("by-the-fire", "btf-05", "Frame from By the Fire", "large-window", "right"),
+    loop: shot("by-the-fire", "btf-loop", "By the Fire, a moment from the film", "full-bleed"),
+    film: shot("by-the-fire", "btf-film", "By the Fire", "full-bleed"),
     recognition: [
       { kind: "Winner, Best Cinematography", festival: "FHIFF (Italy)", laurel: "/media/laurels/btf-1.svg" },
       { kind: "Official Selection", festival: "Berlin Commercial Awards", year: 2026, note: "Cultural Work", laurel: "/media/laurels/btf-2.svg" },
@@ -129,8 +139,13 @@ export const films: Film[] = [
 
 export const portraits = {
   opening: shot("portraits", "portrait-01", "Portrait of Nicolás J. Scatamacchia", "full-bleed"),
-  behind: shot("portraits", "portrait-02", "Nicolás J. Scatamacchia on set", "small-window", "left"),
-  second: shot("portraits", "portrait-03", "Nicolás J. Scatamacchia", "small-window", "right"),
+  /** Behind the camera: one image per bio line, each rolling in on a shutter and developing. */
+  sequence: [
+    shot("portraits", "portrait-02", "Nicolás J. Scatamacchia on set", "small-window", "left"),
+    shot("portraits", "portrait-03", "Nicolás J. Scatamacchia", "small-window", "left"),
+    shot("portraits", "portrait-04", "Nicolás J. Scatamacchia behind the camera", "small-window", "left"),
+    shot("portraits", "portrait-05", "Nicolás J. Scatamacchia", "small-window", "left"),
+  ],
 };
 
 /** The opening's two film shots: film 1 large right, film 2 small left. */

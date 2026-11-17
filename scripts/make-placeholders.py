@@ -63,6 +63,26 @@ def clip(base, size, pal, label):
     im.save(poster, "JPEG", quality=84, optimize=True, progressive=True)
     os.remove(tmp)
 
+def movie(base, pal, label, seconds, titled):
+    c = ["0x%02x%02x%02x" % tuple(p) for p in pal]
+    src = f"gradients=s=1280x720:c0={c[0]}:c1={c[1]}:c2={c[2]}:nb_colors=3:speed=0.015:duration={seconds}:rate=24:type=radial:seed=11"
+    vf = "format=yuv420p"
+    if titled:
+        vf = ("drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='PLACEHOLDER FILM  %{pts\\:hms}':"
+              "fontcolor=white@0.75:fontsize=26:x=(w-text_w)/2:y=h-80," + vf)
+    run = lambda *a: subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *a], check=True)
+    if titled:  # a quiet tone so the player's sound controls have something to control
+        run("-f", "lavfi", "-i", src, "-f", "lavfi", "-i", f"sine=frequency=220:duration={seconds}", "-vf", vf,
+            "-c:v", "libx264", "-preset", "slow", "-crf", "26", "-c:a", "aac", "-b:a", "64k", "-af", "volume=0.08",
+            "-shortest", "-movflags", "+faststart", base + ".mp4")
+    else:
+        run("-f", "lavfi", "-i", src, "-vf", vf, "-c:v", "libx264", "-preset", "slow", "-crf", "26", "-an", "-movflags", "+faststart", base + ".mp4")
+    tmp = base + "-poster.png"
+    run("-i", base + ".mp4", "-frames:v", "1", tmp)
+    im = Image.open(tmp).convert("RGB")
+    im.save(base + ".jpg", "JPEG", quality=84, optimize=True, progressive=True)
+    os.remove(tmp)
+
 for folder, f in MAN["folders"].items():
     out = os.path.join(ROOT, "public", "media", folder)
     os.makedirs(out, exist_ok=True)
@@ -72,7 +92,10 @@ for folder, f in MAN["folders"].items():
         if s["kind"] == "image":
             if FORCE or not os.path.exists(base + ".jpg"):
                 image(base + ".jpg", size, f["palette"], hash(s["id"]) % 9999, s["id"] + ".jpg")
-        else:
+        elif s["kind"] == "clip":
             if FORCE or not os.path.exists(base + ".mp4"):
                 clip(base, size, f["palette"], s["id"] + ".mp4")
+        else:  # loop (background loop) or film (the player's source)
+            if FORCE or not os.path.exists(base + ".mp4"):
+                movie(base, f["palette"], s["id"] + ".mp4", 8 if s["kind"] == "loop" else 24, s["kind"] == "film")
         print("ok", folder, s["id"])

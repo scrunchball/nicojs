@@ -11,6 +11,25 @@ export function Picture({ shot, priority = false }: { shot: Shot; priority?: boo
     "data-mode": shot.composition === "full-bleed" ? "full" : "window",
     "data-develop": priority ? "timer" : undefined,
   };
+  if (shot.kind === "loop" || shot.kind === "film") {
+    // a quiet background loop: the Projector plays it on the picture canvas while its beat is on screen
+    return (
+      <video
+        className="pic"
+        {...data}
+        data-loop
+        poster={shot.src}
+        src={shot.loop}
+        width={shot.width}
+        height={shot.height}
+        muted
+        loop
+        playsInline
+        preload="none"
+        aria-label={shot.alt}
+      />
+    );
+  }
   if (shot.kind === "clip") {
     return (
       <video

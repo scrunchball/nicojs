@@ -15,7 +15,7 @@ const FADE_SHARE = 0.6; // a scene fades to black over the first 60% of its rest
 
 const HOLD_VH: Record<string, number> = {
   short: 40, normal: 60, long: 90,
-  "t-short": 30, "t-normal": 45, "t-long": 60, "t-triple": 135,
+  "t-short": 30, "t-normal": 45, "t-long": 60, "t-triple": 135, "t-five": 150,
 };
 
 export type Beat = {
@@ -24,9 +24,16 @@ export type Beat = {
   frame: HTMLElement; // the pinned screen
   kind: "picture" | "text";
   shot: HTMLImageElement | HTMLVideoElement | null;
-  /** Credit roll (Festival circuit): the track that moves up 1:1 with scroll, and its title's height. */
+  /** Credit roll (Festival circuit): the list that moves up 1:1 with scroll through its box. */
   roll: HTMLElement | null;
-  rollTitle: number;
+  rollBox: number;
+  rollLead: number;
+  /** Sequence (Behind the camera): one picture per line; a rolling shutter brings each next one in. */
+  seq: { pics: HTMLElement[]; shots: (HTMLImageElement | HTMLVideoElement)[]; lines: HTMLElement[] } | null;
+  /** Reel scenes play inside the reel container. */
+  reel: boolean;
+  /** Picture brightness for this beat (the watch loop sits dimmed behind its button). */
+  dim: number;
   /** Scene name (section data-scene) and where the scene starts, for its background motif. */
   scene: string;
   sceneStart: number;
@@ -72,10 +79,14 @@ export function compile(root: HTMLElement, vh: number, width: number): { beats: 
     slots.forEach((slot) => {
       let len = Math.round(((HOLD_VH[slot.dataset.hold ?? "normal"] ?? 60) * vh * scale) / 100 / PX_PER_FRAME) * PX_PER_FRAME;
       const roll = slot.querySelector<HTMLElement>("[data-roll]");
-      if (roll) {
-        // the title starts centred and the whole roll travels up and out of the top: 1:1 with scroll
-        const title = roll.firstElementChild as HTMLElement | null;
-        len = Math.round((roll.offsetHeight + vh * 0.5 + (title?.offsetHeight ?? 0) / 2) / PX_PER_FRAME) * PX_PER_FRAME;
+      const box = slot.querySelector<HTMLElement>("[data-roll-box]");
+      if (roll && box) {
+        // the title holds alone for a moment, then the awards travel up through the box 1:1 with scroll
+        len = Math.round((vh * 0.22 * scale + roll.offsetHeight + box.offsetHeight) / PX_PER_FRAME) * PX_PER_FRAME;
+      }
+      if (slot.dataset.beat === "seq") {
+        const n = Number(slot.dataset.n ?? 1);
+        len = Math.round((n * 50 * vh * scale) / 100 / PX_PER_FRAME) * PX_PER_FRAME;
       }
       slot.style.height = `${len}px`;
     });
@@ -95,8 +106,9 @@ export function compile(root: HTMLElement, vh: number, width: number): { beats: 
     const scene = sec.dataset.scene ?? "";
     slots.forEach((slot, i) => {
       const r = slot.getBoundingClientRect();
-      const kind = slot.dataset.beat === "picture" ? "picture" : "text";
+      const kind = slot.dataset.beat === "picture" || slot.dataset.beat === "seq" ? "picture" : "text";
       const roll = slot.querySelector<HTMLElement>("[data-roll]");
+      const seqPics = Array.from(slot.querySelectorAll<HTMLElement>("[data-seq-pic]"));
       const prev = beats[beats.length - 1];
       const firstInScene = i === 0;
       const last = i === slots.length - 1;
@@ -109,7 +121,15 @@ export function compile(root: HTMLElement, vh: number, width: number): { beats: 
         kind,
         shot: slot.querySelector<HTMLImageElement | HTMLVideoElement>("[data-shot]"),
         roll,
-        rollTitle: (roll?.firstElementChild as HTMLElement | null)?.offsetHeight ?? 0,
+        rollBox: slot.querySelector<HTMLElement>("[data-roll-box]")?.offsetHeight ?? 0,
+        rollLead: Math.round(vh * 0.22 * scale),
+        seq: seqPics.length ? {
+          pics: seqPics,
+          shots: seqPics.map((p) => p.querySelector<HTMLImageElement | HTMLVideoElement>("[data-shot]")!),
+          lines: Array.from(slot.querySelectorAll<HTMLElement>("[data-seq-line]")),
+        } : null,
+        reel: sec.hasAttribute("data-reel"),
+        dim: Number(slot.dataset.dim ?? 1),
         scene,
         sceneStart,
         start,

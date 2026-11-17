@@ -69,6 +69,10 @@ Not yet / caveats:
 - Interface fades already use 200 ms with the projector ease (cubic-bezier); no CustomEase needed (no GSAP, D-27).
 - Laurels, frames and portraits are still placeholders.
 
+### Stage 6 corrections (Adam's review), done
+- Festival box roll with laurels and dot leaders; reel container with rolling-shutter entrance; corner text layout and smaller reel text; watch beat with background loop and custom player (grain fades away); bio shutter sequence (4 portraits); end title word by word with "next one." on line two; glow/falloff on large type; grain slightly stronger on dark; language dropdown; PROJECTOR + SOUND bottom-right; viewfinder marks. See D-41..D-51.
+- Media list grew: portrait-04/05, wei/btf-loop, wei/btf-film (placeholders in place).
+
 ## Not started
 Stage 7 film pages and credits, 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 

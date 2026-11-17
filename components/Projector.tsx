@@ -36,6 +36,13 @@ const CONFIG = {
   lerp: 0.09,
 };
 
+/** The reel container's rect; mirrors --box-x / --box-y / --box-r in globals.css. */
+function boxFor(vw: number, vh: number) {
+  const phone = vw < 810;
+  const x = vw * (phone ? 0.03 : 0.035), y = vh * (phone ? 0.085 : 0.09);
+  return { x, y, w: vw - 2 * x, h: vh - 2 * y, r: phone ? 20 : 28, jag: 2.5, t: 0 };
+}
+
 type ShotState = {
   el: HTMLImageElement | HTMLVideoElement;
   beat: Beat;
@@ -83,6 +90,8 @@ export function Projector() {
     let motifTime = 0; // advances only while motion is on
     let builds: (Build & { beat?: Beat })[] = [];
     const NAME_PRINT_AT = 0.35; // the name starts printing once the portrait's shadows are up
+    let watching = false; // the film player is open: the screening rests
+    let lastVf = -1;
 
     const tcEl = document.querySelector<HTMLElement>("[data-timecode]");
     const toggle = document.querySelector<HTMLButtonElement>("[data-projector-toggle]");
@@ -114,12 +123,12 @@ export function Projector() {
         if (s.el instanceof HTMLVideoElement) {
           if (reduced) { s.loading = false; return; } // no scrubbing: the poster stays in the DOM
           const v = s.el;
-          const scrub = v.dataset.scrub;
+          const scrub = v.dataset.scrub ?? (v.dataset.loop !== undefined ? v.getAttribute("src") ?? undefined : undefined);
           if (scrub && !v.src.startsWith("blob:")) {
-            // All-intra encode for frame-accurate seeking, held in memory as a blob: seeking then never depends on
-            // the server honouring range requests (Cloudflare Pages may answer 200 with the whole file).
+            // Scrub clips (all-intra) and background loops are held in memory as blobs: seeking and looping then
+            // never depend on the server honouring range requests (Cloudflare Pages may answer 200 with the whole file).
             const res = await fetch(scrub);
-            if (!res.ok) throw new Error(`scrub clip ${res.status}: ${scrub}`);
+            if (!res.ok) throw new Error(`clip ${res.status}: ${scrub}`);
             const url = URL.createObjectURL(await res.blob());
             if (!s.beat.slot.dataset.near) { URL.revokeObjectURL(url); s.loading = false; return; }
             v.src = url;
@@ -182,15 +191,15 @@ export function Projector() {
       beats = out.beats;
       for (const bd of builds) bd.beat = beats.find((b) => b.frame.contains(bd.el));
       const old = new Map(shots.map((s) => [s.el, s]));
-      shots = beats.filter((b) => b.shot).map((b) => {
-        const s = old.get(b.shot!);
+      shots = beats.flatMap((b) => (b.seq ? b.seq.shots : b.shot ? [b.shot] : []).map((el) => {
+        const s = old.get(el);
         if (s) { s.beat = b; return s; }
         return {
-          el: b.shot!, beat: b, timer: b.shot!.dataset.develop === "timer", loading: false, tex: null,
-          aspect: (Number(b.shot!.getAttribute("width")) || 16) / (Number(b.shot!.getAttribute("height")) || 9),
+          el, beat: b, timer: el.dataset.develop === "timer", loading: false, tex: null,
+          aspect: (Number(el.getAttribute("width")) || 16) / (Number(el.getAttribute("height")) || 9),
           duration: 0, drawn: false, developStart: -1,
         };
-      });
+      }));
       if (prev && beats[prev.i]) {
         const b = beats[prev.i];
         const y = b.start + prev.q * (b.end - b.start);
@@ -205,6 +214,10 @@ export function Projector() {
         delete active.slot.dataset.active;
         active.frame.style.removeProperty("--o");
         active.frame.style.removeProperty("--screen");
+        active.frame.style.clipPath = "";
+        // background loops rest when their beat isn't playing
+        const v = active.shot;
+        if (v instanceof HTMLVideoElement && v.dataset.loop !== undefined) v.pause();
       }
       active = b;
       if (b) b.slot.dataset.active = "1";
@@ -219,7 +232,7 @@ export function Projector() {
 
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop);
-      if (!pic || !grain || lost) return;
+      if (!pic || !grain || lost || watching) return;
       lenis?.raf(now);
       const y = window.scrollY;
       const vw = window.innerWidth, vh = window.innerHeight;
@@ -241,10 +254,31 @@ export function Projector() {
         st.beat.frame.style.setProperty("--o", String(st.opacity));
         st.beat.frame.style.setProperty("--screen", String(st.screen));
       }
-      // credit roll: the title starts centred and everything travels up 1:1 with scroll, stepped per film frame
+      // credit roll: the title holds at the top; after a moment the awards travel up through their box 1:1 with
+      // scroll, stepped per film frame, out of darkness and into it
       if (st?.beat.roll && (moved || dirty)) {
         const yq = yFrame * PX_PER_FRAME;
-        st.beat.roll.style.transform = `translate3d(0, ${Math.round(vh * 0.5 - st.beat.rollTitle / 2 - (yq - st.beat.start))}px, 0)`;
+        const travelled = Math.max(0, yq - st.beat.start - st.beat.rollLead);
+        st.beat.roll.style.transform = `translate3d(0, ${Math.round(st.beat.rollBox - travelled)}px, 0)`;
+      }
+
+      // reels: entering one, a rolling shutter sweeps down the screen and reveals the reel container
+      const b0 = st?.beat;
+      let reveal = 1;
+      if (b0?.reel && motion) {
+        const into = Math.floor((y - b0.sceneStart) / PX_PER_FRAME) * PX_PER_FRAME;
+        reveal = Math.min(1, Math.max(0, into / (vh * 0.22)));
+      }
+      if (b0) b0.frame.style.clipPath = reveal < 1 ? `inset(0 0 ${((1 - reveal) * 100).toFixed(2)}% 0)` : "";
+
+      // viewfinder: thin marks draw in at the start of each beat and out at its end (not in reels or on red)
+      if (moved || filmTick) {
+        let vf = 0;
+        if (b0 && !b0.reel && !b0.red && motion && st && st.fade >= 1) {
+          const fin = (y - b0.start) / PX_PER_FRAME, fout = (b0.end - y) / PX_PER_FRAME;
+          vf = Math.max(0, Math.min(1, Math.floor(fin) / 10, Math.floor(fout) / 8));
+        }
+        if (vf !== lastVf) { root.style.setProperty("--vf", vf.toFixed(2)); lastVf = vf; }
       }
 
       if (tcEl && yFrame !== lastTc) { tcEl.textContent = timecode(y); lastTc = yFrame; }
@@ -253,37 +287,71 @@ export function Projector() {
       const shot = st?.beat.shot ? shots.find((s) => s.el === st.beat.shot) : undefined;
       const timerRunning = !!shot?.timer && shot.tex !== null && timerProgress(shot, now) < 1;
       if (moved || filmTick || dirty || timerRunning) {
-        const draw = [];
-        if (st && shot?.tex) {
+        const draw: Parameters<PictureEngine["frame"]>[0] = [];
+        const reelBox = st?.beat.reel ? { ...boxFor(vw, vh), t: motifTime } : null;
+        const wv = motion ? weave(WEAVE.picture, film) : { x: 0, y: 0, rot: 0 };
+        const push = (s: ShotState, progress: number, extra: { wipe?: number; zoom?: number } = {}) => {
+          if (!s.tex || !st) return;
+          const r = s.el.getBoundingClientRect();
+          if (r.width <= 0) return;
+          draw.push({
+            tex: s.tex, aspect: s.aspect, rect: { x: r.left, y: r.top, w: r.width, h: r.height },
+            full: s.el.dataset.mode === "full", weave: wv,
+            progress, develop: progress < 1, dye: CONFIG.dye, zoom: extra.zoom ?? st.zoom, fade: st.fade * st.beat.dim,
+            box: reelBox, reveal, wipe: extra.wipe,
+          });
+          if (!s.drawn) { s.drawn = true; s.el.dataset.ready = "1"; } // the canvas has it now: fade the DOM picture out
+        };
+        const seq = st?.beat.seq;
+        if (st && seq) {
+          // Behind the camera: one picture per line. A rolling shutter brings the next one in as blank paper,
+          // then it develops; the line beside it changes with it.
+          const n = seq.lines.length;
+          const k = Math.min(n - 1, Math.floor(st.q * n));
+          const local = st.q * n - k;
+          const sub = (st.beat.end - st.beat.start) / n / PX_PER_FRAME;
+          const cur = shots.find((x) => x.el === seq.shots[k]);
+          const prev = k > 0 ? shots.find((x) => x.el === seq.shots[k - 1]) : undefined;
+          const wipeT = 0.22;
+          const dev = !motion ? 1 : k === 0 ? Math.min(1, st.q * n / 0.45) : Math.min(1, Math.max(0, (local - 0.06) / 0.5));
+          if (prev && local < wipeT && motion) {
+            push(prev, 1, { zoom: 1 });
+            if (cur) push(cur, dev, { wipe: local / wipeT, zoom: 1 });
+          } else if (cur) push(cur, dev, { zoom: 1 });
+          seq.pics.forEach((p, i) => { if (i === k) p.dataset.current = "1"; else delete p.dataset.current; });
+          seq.lines.forEach((l, i) => {
+            let o = 0;
+            if (i === k) {
+              const fi = Math.floor(local * sub), fo = Math.floor((1 - local) * sub);
+              o = !motion ? 1 : Math.min(1, fi / 6, i === n - 1 ? 1 : fo / 4);
+            }
+            l.style.opacity = String(o);
+          });
+        } else if (st && shot?.tex) {
           let develop = st.develop;
           let hold = false;
           if (shot.timer) { develop = timerProgress(shot, now); hold = now < shot.developStart; }
-          if (shot.el instanceof HTMLVideoElement && shot.duration) {
-            const t = Math.min(shot.duration - 1 / FPS, st.q * shot.duration); // holds the last frame
-            if (Math.abs(shot.el.currentTime - t) > 0.5 / FPS) shot.el.currentTime = t;
+          const v = shot.el;
+          if (v instanceof HTMLVideoElement) {
+            if (v.dataset.loop !== undefined) {
+              if (v.paused && motion) v.play().catch(() => {}); // a quiet loop behind the watch button
+              if (!motion && !v.paused) v.pause();
+            } else if (shot.duration) {
+              const t = Math.min(shot.duration - 1 / FPS, st.q * shot.duration); // scrub; holds the last frame
+              if (Math.abs(v.currentTime - t) > 0.5 / FPS) v.currentTime = t;
+            }
           }
-          const r = shot.el.getBoundingClientRect();
-          if (!hold && r.width > 0) {
-            draw.push({
-              tex: shot.tex, aspect: shot.aspect, rect: { x: r.left, y: r.top, w: r.width, h: r.height },
-              full: shot.el.dataset.mode === "full",
-              weave: motion ? weave(WEAVE.picture, film) : { x: 0, y: 0, rot: 0 },
-              progress: develop, develop: develop < 1, dye: CONFIG.dye, zoom: st.zoom, fade: st.fade,
-            });
-          }
+          if (!hold) push(shot, develop);
         }
         // the scene's background motif: fades in over the scene's first 30vh, out with the scene through its rest
-        let bg = null;
+        let bg: Parameters<PictureEngine["frame"]>[1] = null;
         const motif = st ? MOTIFS[st.beat.scene] : undefined;
-        if (st && motif) {
+        if (st && (motif || reelBox)) {
           const env = Math.min(1, Math.max(0, (y - st.beat.sceneStart) / (vh * 0.3))) * st.fade;
-          bg = { ...motif, intensity: motif.intensity * env, time: motifTime };
+          const m = motif ?? { mode: 0, color: [0, 0, 0] as [number, number, number], intensity: 0 };
+          bg = { ...m, intensity: m.intensity * (reelBox ? 1 : env), time: motifTime, box: reelBox, reveal, fade: st.fade };
         }
         pic.frame(draw, bg);
-        if (draw.length && shot && !shot.drawn) {
-          shot.drawn = true;
-          shot.el.dataset.ready = "1"; // the canvas has it now: fade the DOM picture out
-        }
         if (shot?.timer && shot.drawn) pending();
         dirty = false;
       }
@@ -325,6 +393,17 @@ export function Projector() {
     };
 
     /* ---------- interaction ---------- */
+
+    const onPlayer = (e: Event) => {
+      watching = !!(e as CustomEvent<{ open: boolean }>).detail?.open;
+      if (watching) {
+        lenis?.stop();
+        if (active?.shot instanceof HTMLVideoElement) active.shot.pause();
+      } else {
+        lenis?.start();
+        dirty = true;
+      }
+    };
 
     const onToggle = () => {
       motion = !motion && !reduced ? true : false;
@@ -395,6 +474,12 @@ export function Projector() {
       pic = null; grain = null;
       lenis?.destroy(); lenis = null;
       root.classList.remove("projector-on", "film", "on-red");
+      root.style.removeProperty("--vf");
+      for (const b of beats) {
+        b.frame.style.clipPath = "";
+        b.seq?.lines.forEach((l) => { l.style.opacity = ""; });
+        b.seq?.pics.forEach((p) => { delete p.dataset.current; });
+      }
       pending();
     };
 
@@ -407,6 +492,7 @@ export function Projector() {
       c.addEventListener("webglcontextrestored", onRestored);
     }
     toggle?.addEventListener("click", onToggle);
+    window.addEventListener("player", onPlayer);
     document.addEventListener("focusin", onFocus);
 
     init();
@@ -417,6 +503,7 @@ export function Projector() {
         c.removeEventListener("webglcontextrestored", onRestored);
       }
       toggle?.removeEventListener("click", onToggle);
+      window.removeEventListener("player", onPlayer);
       document.removeEventListener("focusin", onFocus);
       teardown();
     };

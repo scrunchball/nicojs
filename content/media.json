@@ -39,6 +39,16 @@
           "id": "wei-05",
           "kind": "image",
           "note": "Last shot: large window, with the second sentence beside it"
+        },
+        {
+          "id": "wei-loop",
+          "kind": "loop",
+          "note": "Watch beat: short background loop (6-10 s, no text)"
+        },
+        {
+          "id": "wei-film",
+          "kind": "film",
+          "note": "The film (or trailer) for the custom player. Full films need video hosting (backend phase)"
         }
       ]
     },
@@ -80,6 +90,16 @@
           "id": "btf-05",
           "kind": "image",
           "note": "Last shot: large window, with the second sentence beside it"
+        },
+        {
+          "id": "btf-loop",
+          "kind": "loop",
+          "note": "Watch beat: short background loop (6-10 s, no text)"
+        },
+        {
+          "id": "btf-film",
+          "kind": "film",
+          "note": "The film (or trailer) for the custom player. Full films need video hosting (backend phase)"
         }
       ]
     },
@@ -119,7 +139,7 @@
         {
           "id": "portrait-02",
           "kind": "image",
-          "note": "Behind the camera, small window, portrait 4:5",
+          "note": "Behind the camera, 1st of 4 (with bio line 1), portrait 4:5",
           "size": [
             1600,
             2000
@@ -128,7 +148,25 @@
         {
           "id": "portrait-03",
           "kind": "image",
-          "note": "Second portrait, small window, portrait 4:5 (B&W-friendly)",
+          "note": "Behind the camera, 2nd of 4 (bio line 2), portrait 4:5",
+          "size": [
+            1600,
+            2000
+          ]
+        },
+        {
+          "id": "portrait-04",
+          "kind": "image",
+          "note": "Behind the camera, 3rd of 4 (bio line 3), portrait 4:5",
+          "size": [
+            1600,
+            2000
+          ]
+        },
+        {
+          "id": "portrait-05",
+          "kind": "image",
+          "note": "Behind the camera, 4th of 4 (bio line 4), portrait 4:5",
           "size": [
             1600,
             2000

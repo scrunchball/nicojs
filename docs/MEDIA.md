@@ -17,18 +17,23 @@ Clips need encoding (see below), so send those to Claude.
 | `what-else-is-there` | `wei-01.jpg` | Key image, full-bleed, with the first line of the synopsis |
 | | `wei-02.jpg` | Opening: large window, right |
 | | `wei-05.jpg` | Last shot: large window, with the second sentence beside it |
+| | `wei-loop.mp4` | Watch beat: a short loop behind the button (6–10 s, no text, no sound) |
+| | `wei-film.mp4` | The film for the player (5–10 min: goes to R2, see below) |
 | `by-the-fire` | `btf-01.jpg` | Key image, full-bleed, with the first line of the synopsis |
 | | `btf-02.jpg` | Opening: small window, left |
 | | `btf-05.jpg` | Last shot: large window, with the second sentence beside it |
+| | `btf-loop.mp4` | Watch beat: a short loop behind the button (6–10 s, no text, no sound) |
+| | `btf-film.mp4` | The film for the player (5–10 min: goes to R2, see below) |
 | `portraits` | `portrait-01.jpg` | Opening portrait, full-bleed, landscape (3:2), 2400px+ |
-| | `portrait-02.jpg` | Behind the camera, small window, portrait (4:5) |
-| | `portrait-03.jpg` | Second portrait, small window, portrait (4:5), B&W-friendly |
+| | `portrait-02.jpg` … `portrait-05.jpg` | Behind the camera: four portraits (4:5), one per bio line, in order |
 | `laurels` | `wei-1.svg` … `wei-5.svg` | Laurels for What Else is There?, in the order of its awards (Berlin Short Film Festival, Berlin Commercial Awards, Flickers' Rhode Island, LA Experimental Forum, Hollywood New Directors) |
 | | `btf-1.svg` … `btf-4.svg` | Laurels for By the Fire (FHIFF winner, Berlin Commercial Awards, Awareness Festival, FHIFF selection) |
 
 Laurels: SVG or transparent PNG. If one is a PNG, send it to Claude (the path changes from `.svg` to `.png`).
 
-The reels no longer use clips (Stage 5 corrections). The scrub engine stays in place for later, e.g. the film player.
+**The films (5–10 min)** are 150–400 MB, over Cloudflare Pages' 25 MiB per-file limit. They go on Cloudflare R2
+(free up to 10 GB, serves MP4 with seeking); the player then points at the R2 URL. Send the masters to Claude
+for a 1080p web encode (H.264, ~6 Mbps, AAC audio).
 
 ## Specs (from the brief)
 - **Frames:** clean frame grabs from the graded master. No titles, subtitles, credits or posters.

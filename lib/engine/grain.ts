@@ -2,9 +2,8 @@
  * Grain canvas: one fine, living grain over everything (pictures, black and text).
  * Plates are physically based (Boolean model) and generated at build time by scripts/make-grain.mjs.
  * Every film frame picks a new plate and a random offset, so the grain never visibly repeats.
- * The canvas is composited with mix-blend-mode: overlay (set in CSS; soft-light in the brief, see DECISIONS D-15).
- * Mid-grey = no change; grain shows most in midtones and falls to nothing at pure black and white,
- * as it does in a print.
+ * The canvas is composited with mix-blend-mode: soft-light (CSS). Mid-grey = no change; grain shows most in
+ * midtones and a little on black (Adam asked for slightly more on dark backgrounds, D-44).
  */
 import type * as T from "three";
 import { GpuTimer } from "./gpuTimer";
@@ -43,8 +42,8 @@ void main() {
   vec2 css = gl_FragCoord.xy / uPx;
   vec2 uv = css / (${PLATE}.0 * uScale) + uOffset;
   float g = texture(uPlates, vec3(uv, uLayer)).r;   // plates: mean 0.5, std 0.2
-  // grey around 0.5 (neutral in overlay). Strength 0.06 => ~2% std on a midtone: felt, not seen.
-  float v = 0.5 + (g - 0.5) * uStrength * 1.6667;
+  // grey around 0.5 (neutral in soft-light). Strength 0.06 => ~1.8% std on a midtone, ~1.7 levels on Gate black.
+  float v = 0.5 + (g - 0.5) * uStrength * 4.0;
   fragColor = vec4(vec3(v), 1.0);
 }
 `;

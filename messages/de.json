@@ -1,10 +1,26 @@
 {
   "skip": "Zum Inhalt springen",
-  "nav": { "films": "FILME", "about": "ÜBER", "contact": "KONTAKT" },
-  "markers": { "reel": "ROLLE", "end": "ENDE", "projector": "PROJEKTOR", "sound": "TON", "index": "INDEX", "lost": "VERLORENE ROLLE" },
-  "labels": { "viewFilm": "FILM ANSEHEN", "berlinCommercial": "BERLIN COMMERCIAL AWARDS" },
+  "nav": {
+    "films": "FILME",
+    "about": "ÜBER",
+    "contact": "KONTAKT"
+  },
+  "markers": {
+    "reel": "ROLLE",
+    "end": "ENDE",
+    "projector": "PROJEKTOR",
+    "sound": "TON",
+    "index": "INDEX",
+    "lost": "VERLORENE ROLLE"
+  },
+  "labels": {
+    "viewFilm": "FILM ANSEHEN",
+    "berlinCommercial": "BERLIN COMMERCIAL AWARDS",
+    "watch": "FILM ANSEHEN"
+  },
   "meta": {
     "title": "Nicolás J. Scatamacchia · Filmregisseur, Berlin",
     "description": "Berlin-based director making films about hope and beauty. Selected two years in a row by Berlin Commercial Awards."
-  }
+  },
+  "language": "Sprache"
 }
