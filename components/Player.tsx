@@ -42,6 +42,7 @@ function PlayerRoom({ film, title, onClose }: { film: Shot; title: string; onClo
   const [d, setD] = useState(0);
   const [muted, setMuted] = useState(false);
   const [shown, setShown] = useState(false);
+  const [ar, setAr] = useState(film.width / film.height);
 
   // enter the room: pause the screening, fade the grain, lock scroll
   useEffect(() => {
@@ -84,12 +85,11 @@ function PlayerRoom({ film, title, onClose }: { film: Shot; title: string; onClo
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, toggle]);
 
-  const aspect = film.width / film.height;
 
   return (
     <div className={`player-room ${shown ? "is-shown" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
       <button ref={closeBtn} type="button" className="player-close label" onClick={onClose}>CLOSE <span aria-hidden="true">×</span></button>
-      <div className="player" style={{ ["--ar" as string]: String(aspect) }}>
+      <div className="player" style={{ ["--ar" as string]: String(ar) }}>
         <div className="player-screen">
           <video
             ref={video}
@@ -102,7 +102,11 @@ function PlayerRoom({ film, title, onClose }: { film: Shot; title: string; onClo
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onTimeUpdate={(e) => setT(e.currentTarget.currentTime)}
-            onLoadedMetadata={(e) => setD(e.currentTarget.duration)}
+            onLoadedMetadata={(e) => {
+              const v = e.currentTarget;
+              setD(v.duration);
+              if (v.videoWidth && v.videoHeight) setAr(v.videoWidth / v.videoHeight); // the container takes the film's own shape
+            }}
             onEnded={() => setPlaying(false)}
           />
         </div>

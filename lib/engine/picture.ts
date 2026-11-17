@@ -349,7 +349,7 @@ export class PictureEngine {
           u.uUvScale.value.set(ra > s.aspect ? 1 : ra / s.aspect, ra > s.aspect ? s.aspect / ra : 1);
           u.uRect.value.set(r.x / vw, 1 - (r.y + r.h) / vh, r.w / vw, r.h / vh);
           u.uShift.value.set(dxPx / r.w, dyPx / r.h);
-          u.uOverscan.value = 0.01;
+          u.uOverscan.value = 0.02; // room for weave + mouse parallax without showing an edge
           u.uRot.value = (s.weave.rot * Math.PI) / 180;
         } else {
           // windows: the whole window moves, edges included

@@ -44,8 +44,9 @@ export type Film = {
   link: { href: string };
   /** Key image, full-bleed, carries the first synopsis sentence as its subtitle. */
   keyShot: Shot;
-  /** The last shot, with the second sentence beside it. */
+  /** The closing pair: image 1 with the second sentence off its corner, then image 2. */
   lastShot: Shot;
+  secondShot: Shot;
   /** Watch beat: a short background loop, and the film the custom player plays. */
   loop: Shot;
   film: Shot;
@@ -104,6 +105,7 @@ export const films: Film[] = [
     link: { href: "https://berlincommercial.awardsengine.com/winners/2025/personal-work#193614" },
     keyShot: shot("what-else-is-there", "wei-01", "Frame from What Else is There?", "full-bleed"),
     lastShot: shot("what-else-is-there", "wei-05", "Frame from What Else is There?", "large-window", "left"),
+    secondShot: shot("what-else-is-there", "wei-06", "Frame from What Else is There?", "large-window", "left"),
     loop: shot("what-else-is-there", "wei-loop", "What Else is There?, a moment from the film", "full-bleed"),
     film: shot("what-else-is-there", "wei-film", "What Else is There?", "full-bleed"),
     recognition: [
@@ -126,6 +128,7 @@ export const films: Film[] = [
     link: { href: "https://berlincommercial.awardsengine.com/winners/2026#208868" },
     keyShot: shot("by-the-fire", "btf-01", "Frame from By the Fire", "full-bleed"),
     lastShot: shot("by-the-fire", "btf-05", "Frame from By the Fire", "large-window", "right"),
+    secondShot: shot("by-the-fire", "btf-06", "Frame from By the Fire", "large-window", "right"),
     loop: shot("by-the-fire", "btf-loop", "By the Fire, a moment from the film", "full-bleed"),
     film: shot("by-the-fire", "btf-film", "By the Fire", "full-bleed"),
     recognition: [

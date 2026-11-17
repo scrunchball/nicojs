@@ -74,6 +74,9 @@ Not yet / caveats:
 - Media list grew: portrait-04/05, wei/btf-loop, wei/btf-film (placeholders in place).
 - Re-check over the whole film (700 samples, every 2 film frames): never more than 1 screen and 1 picture at once; at most 2 text groups, only in the Festival circuit (the held title + the award box, by design). Flash: largest 2-frame change 0.13, 3 changes >= 0.1, 0 opposing pairs within 1 s of film (passes WCAG 2.3.1). No errors.
 
+### Stage 6 corrections, round 2 (Adam's review), done
+- Closing pair with image 2 (D-52), festival rows spaced with centred leaders, more glow on the name, centred player controls with edge-to-edge video (D-55), menu landings that cut through black (D-53), mouse parallax (D-54). Fixed: full-frame reel pictures took their intrinsic width in the DOM (now sized to the container).
+
 ## Not started
 Stage 7 film pages and credits, 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 

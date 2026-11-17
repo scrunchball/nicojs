@@ -24,6 +24,8 @@ export type Beat = {
   frame: HTMLElement; // the pinned screen
   kind: "picture" | "text";
   shot: HTMLImageElement | HTMLVideoElement | null;
+  /** Every picture on this screen (the closing pair has two). */
+  shots: (HTMLImageElement | HTMLVideoElement)[];
   /** Credit roll (Festival circuit): the list that moves up 1:1 with scroll through its box. */
   roll: HTMLElement | null;
   rollBox: number;
@@ -120,6 +122,7 @@ export function compile(root: HTMLElement, vh: number, width: number): { beats: 
         frame: slot.querySelector<HTMLElement>(":scope > .frame")!,
         kind,
         shot: slot.querySelector<HTMLImageElement | HTMLVideoElement>("[data-shot]"),
+        shots: Array.from(slot.querySelectorAll<HTMLImageElement | HTMLVideoElement>("[data-shot]")),
         roll,
         rollBox: slot.querySelector<HTMLElement>("[data-roll-box]")?.offsetHeight ?? 0,
         rollLead: Math.round(vh * 0.22 * scale),

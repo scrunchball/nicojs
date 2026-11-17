@@ -91,6 +91,10 @@ export function Projector() {
     let builds: (Build & { beat?: Beat })[] = [];
     const NAME_PRINT_AT = 0.35; // the name starts printing once the portrait's shadows are up
     let watching = false; // the film player is open: the screening rests
+    // mouse parallax: everything but the menu leans a few px toward the pointer (fine pointers only)
+    const finePointer = window.matchMedia("(pointer: fine)").matches;
+    const par = { x: 0, y: 0, tx: 0, ty: 0 };
+    const PAR = { picture: 5, text: 3, box: 2 };
     let lastVf = -1;
 
     const tcEl = document.querySelector<HTMLElement>("[data-timecode]");
@@ -191,7 +195,7 @@ export function Projector() {
       beats = out.beats;
       for (const bd of builds) bd.beat = beats.find((b) => b.frame.contains(bd.el));
       const old = new Map(shots.map((s) => [s.el, s]));
-      shots = beats.flatMap((b) => (b.seq ? b.seq.shots : b.shot ? [b.shot] : []).map((el) => {
+      shots = beats.flatMap((b) => (b.seq ? b.seq.shots : b.shots).map((el) => {
         const s = old.get(el);
         if (s) { s.beat = b; return s; }
         return {
@@ -234,6 +238,18 @@ export function Projector() {
       raf = requestAnimationFrame(loop);
       if (!pic || !grain || lost || watching) return;
       lenis?.raf(now);
+      // parallax eases toward the pointer; the playing screen's text leans via CSS, pictures on the canvas
+      if (finePointer && motion) {
+        const nx = par.x + (par.tx - par.x) * 0.06, ny = par.y + (par.ty - par.y) * 0.06;
+        if (Math.abs(nx - par.x) + Math.abs(ny - par.y) > 0.0005) {
+          par.x = nx; par.y = ny; dirty = true;
+          root.style.setProperty("--par-x", `${(par.x * PAR.text).toFixed(2)}px`);
+          root.style.setProperty("--par-y", `${(par.y * PAR.text).toFixed(2)}px`);
+        }
+      } else if (par.x || par.y) {
+        par.x = par.y = 0; dirty = true;
+        root.style.removeProperty("--par-x"); root.style.removeProperty("--par-y");
+      }
       const y = window.scrollY;
       const vw = window.innerWidth, vh = window.innerHeight;
       if (vw !== lastW || vh !== lastH) {
@@ -288,15 +304,20 @@ export function Projector() {
       const timerRunning = !!shot?.timer && shot.tex !== null && timerProgress(shot, now) < 1;
       if (moved || filmTick || dirty || timerRunning) {
         const draw: Parameters<PictureEngine["frame"]>[0] = [];
-        const reelBox = st?.beat.reel ? { ...boxFor(vw, vh), t: motifTime } : null;
+        const rb = st?.beat.reel ? boxFor(vw, vh) : null;
+        const reelBox = rb ? { ...rb, x: rb.x + par.x * PAR.box, y: rb.y + par.y * PAR.box, t: motifTime } : null;
         const wv = motion ? weave(WEAVE.picture, film) : { x: 0, y: 0, rot: 0 };
         const push = (s: ShotState, progress: number, extra: { wipe?: number; zoom?: number } = {}) => {
           if (!s.tex || !st) return;
           const r = s.el.getBoundingClientRect();
           if (r.width <= 0) return;
+          const full = s.el.dataset.mode === "full";
+          // parallax: windows move whole; full-frame pictures shift inside their overscan
+          const px = par.x * PAR.picture, py = par.y * PAR.picture;
           draw.push({
-            tex: s.tex, aspect: s.aspect, rect: { x: r.left, y: r.top, w: r.width, h: r.height },
-            full: s.el.dataset.mode === "full", weave: wv,
+            tex: s.tex, aspect: s.aspect,
+            rect: full ? { x: r.left, y: r.top, w: r.width, h: r.height } : { x: r.left + px, y: r.top + py, w: r.width, h: r.height },
+            full, weave: full ? { ...wv, x: wv.x + px / r.height, y: wv.y - py / r.height } : wv,
             progress, develop: progress < 1, dye: CONFIG.dye, zoom: extra.zoom ?? st.zoom, fade: st.fade * st.beat.dim,
             box: reelBox, reveal, wipe: extra.wipe,
           });
@@ -327,21 +348,25 @@ export function Projector() {
             }
             l.style.opacity = String(o);
           });
-        } else if (st && shot?.tex) {
-          let develop = st.develop;
-          let hold = false;
-          if (shot.timer) { develop = timerProgress(shot, now); hold = now < shot.developStart; }
-          const v = shot.el;
-          if (v instanceof HTMLVideoElement) {
-            if (v.dataset.loop !== undefined) {
-              if (v.paused && motion) v.play().catch(() => {}); // a quiet loop behind the watch button
-              if (!motion && !v.paused) v.pause();
-            } else if (shot.duration) {
-              const t = Math.min(shot.duration - 1 / FPS, st.q * shot.duration); // scrub; holds the last frame
-              if (Math.abs(v.currentTime - t) > 0.5 / FPS) v.currentTime = t;
+        } else if (st) {
+          for (const el of st.beat.shots) {
+            const sh = shots.find((x) => x.el === el);
+            if (!sh?.tex) continue;
+            let develop = st.develop;
+            let hold = false;
+            if (sh.timer) { develop = timerProgress(sh, now); hold = now < sh.developStart; }
+            const v = sh.el;
+            if (v instanceof HTMLVideoElement) {
+              if (v.dataset.loop !== undefined) {
+                if (v.paused && motion) v.play().catch(() => {}); // a quiet loop behind the watch button
+                if (!motion && !v.paused) v.pause();
+              } else if (sh.duration) {
+                const t = Math.min(sh.duration - 1 / FPS, st.q * sh.duration); // scrub; holds the last frame
+                if (Math.abs(v.currentTime - t) > 0.5 / FPS) v.currentTime = t;
+              }
             }
+            if (!hold) push(sh, develop);
           }
-          if (!hold) push(shot, develop);
         }
         // the scene's background motif: fades in over the scene's first 30vh, out with the scene through its rest
         let bg: Parameters<PictureEngine["frame"]>[1] = null;
@@ -394,6 +419,50 @@ export function Projector() {
 
     /* ---------- interaction ---------- */
 
+    const onPointer = (e: PointerEvent) => {
+      par.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+      par.ty = (e.clientY / window.innerHeight - 0.5) * 2;
+    };
+
+    // Menu: land where the important thing is already on screen, and cut there through black
+    // (fast-forwarding through the film would flash every cut on the way).
+    const landing = (hash: string): number | null => {
+      const vh = window.innerHeight;
+      if (hash === "#top") return 0;
+      if (hash === "#films") {
+        const b = beats.find((x) => x.reel);
+        return b ? b.start + Math.round(vh * 0.22) + 24 * PX_PER_FRAME : null; // container revealed, title printed
+      }
+      if (hash === "#about") {
+        const b = beats.find((x) => x.seq);
+        return b && b.seq ? b.start + Math.round((b.end - b.start) / b.seq.lines.length * 0.55) : null; // first portrait developed, its line in
+      }
+      if (hash === "#contact") {
+        const b = beats.find((x) => x.red && x.frame.querySelector("a[href^='mailto:']"));
+        return b ? b.start + Math.round((b.end - b.start) * 0.35) : null; // the email, before the red goes down
+      }
+      return null;
+    };
+    const onNav = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[href^='#']");
+      if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey) return;
+      const hash = a.getAttribute("href")!;
+      const y = landing(hash);
+      if (y === null) return;
+      e.preventDefault();
+      const jump = () => {
+        lenis ? lenis.scrollTo(y, { immediate: true, force: true }) : window.scrollTo(0, y);
+        history.replaceState(null, "", hash);
+        dirty = true;
+      };
+      if (!motion) { jump(); return; }
+      root.classList.add("jumping");
+      window.setTimeout(() => {
+        jump();
+        requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove("jumping")));
+      }, 190);
+    };
+
     const onPlayer = (e: Event) => {
       watching = !!(e as CustomEvent<{ open: boolean }>).detail?.open;
       if (watching) {
@@ -435,7 +504,7 @@ export function Projector() {
         if (disposed) return;
         if (!reduced && !lenis) {
           const { default: Lenis } = await import("lenis");
-          lenis = new Lenis({ lerp: CONFIG.lerp, anchors: true, autoRaf: false });
+          lenis = new Lenis({ lerp: CONFIG.lerp, anchors: false, autoRaf: false }); // menu landings are ours (onNav)
         }
         lost = false;
         root.classList.add("projector-on", "film");
@@ -475,6 +544,9 @@ export function Projector() {
       lenis?.destroy(); lenis = null;
       root.classList.remove("projector-on", "film", "on-red");
       root.style.removeProperty("--vf");
+      root.style.removeProperty("--par-x");
+      root.style.removeProperty("--par-y");
+      root.classList.remove("jumping");
       for (const b of beats) {
         b.frame.style.clipPath = "";
         b.seq?.lines.forEach((l) => { l.style.opacity = ""; });
@@ -493,6 +565,8 @@ export function Projector() {
     }
     toggle?.addEventListener("click", onToggle);
     window.addEventListener("player", onPlayer);
+    window.addEventListener("pointermove", onPointer, { passive: true });
+    document.addEventListener("click", onNav);
     document.addEventListener("focusin", onFocus);
 
     init();
@@ -504,6 +578,8 @@ export function Projector() {
       }
       toggle?.removeEventListener("click", onToggle);
       window.removeEventListener("player", onPlayer);
+      window.removeEventListener("pointermove", onPointer);
+      document.removeEventListener("click", onNav);
       document.removeEventListener("focusin", onFocus);
       teardown();
     };

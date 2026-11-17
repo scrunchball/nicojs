@@ -16,12 +16,14 @@ Clips need encoding (see below), so send those to Claude.
 |---|---|---|
 | `what-else-is-there` | `wei-01.jpg` | Key image, full-bleed, with the first line of the synopsis |
 | | `wei-02.jpg` | Opening: large window, right |
-| | `wei-05.jpg` | Last shot: large window, with the second sentence beside it |
+| | `wei-05.jpg` | Closing pair, image 1 (the second sentence sits off its corner) |
+| | `wei-06.jpg` | Closing pair, image 2 |
 | | `wei-loop.mp4` | Watch beat: a short loop behind the button (6–10 s, no text, no sound) |
 | | `wei-film.mp4` | The film for the player (5–10 min: goes to R2, see below) |
 | `by-the-fire` | `btf-01.jpg` | Key image, full-bleed, with the first line of the synopsis |
 | | `btf-02.jpg` | Opening: small window, left |
-| | `btf-05.jpg` | Last shot: large window, with the second sentence beside it |
+| | `btf-05.jpg` | Closing pair, image 1 (the second sentence sits off its corner) |
+| | `btf-06.jpg` | Closing pair, image 2 |
 | | `btf-loop.mp4` | Watch beat: a short loop behind the button (6–10 s, no text, no sound) |
 | | `btf-film.mp4` | The film for the player (5–10 min: goes to R2, see below) |
 | `portraits` | `portrait-01.jpg` | Opening portrait, full-bleed, landscape (3:2), 2400px+ |

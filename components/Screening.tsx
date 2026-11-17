@@ -78,10 +78,11 @@ export function Screening() {
                 <Picture shot={film.keyShot} />
                 <div className="caption" data-weave="subtitle"><p className="subtitle subtitle--small">{film.synopsis[0]}</p></div>
               </Frame>
-              {/* the last shot; the sentence sits off its corner: below-right of a left image, below-left of a right one */}
+              {/* the closing pair: image 1, the sentence off its corner, image 2 beside the sentence (mirrored in reel 2) */}
               <Frame beat="picture" hold="normal" className={`frame--corner frame--corner-${side}`}>
-                <Window shot={film.lastShot} />
+                <div className="corner-a"><Window shot={film.lastShot} /></div>
                 <p className="subtitle subtitle--small corner-text" data-weave="subtitle">{film.synopsis[1]}</p>
+                <div className="corner-b"><Window shot={film.secondShot} /></div>
               </Frame>
               {/* watch: a quiet loop of the film behind, and the player on demand */}
               <Frame beat="picture" hold="long" className="frame--bleed frame--watch" dim={0.42}>
