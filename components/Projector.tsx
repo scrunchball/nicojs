@@ -22,12 +22,13 @@ import type { Tex } from "@/lib/engine/gl";
 import type { GrainEngine } from "@/lib/engine/grain";
 import { PX_PER_FRAME, compile, evaluate, timecode, type Beat } from "@/lib/engine/timeline";
 import { MOTIFS } from "@/lib/engine/motifs";
+import { Flicker } from "@/lib/engine/flicker";
 import { applyBuild, completeBuild, prepareBuilds, type Build } from "@/lib/engine/builds";
 
 const CONFIG = {
   grain: { strength: 0.06, density: 2, scale: 1 },
   dye: 0.03,
-  openingBlackMs: 1000, // black and grain for 1 s on load
+  leaderFrames: 48, // the film leader on load: "3" then "2", one sweep per second (24 film frames each)
   openingDevelopMs: 2500, // then the portrait develops on a 2.5 s timer
   nearAhead: 3, // viewports ahead of the playhead to stream textures
   nearBehind: 1.5,
@@ -58,6 +59,7 @@ type ShotState = {
 export function Projector() {
   const picRef = useRef<HTMLCanvasElement>(null);
   const grainRef = useRef<HTMLCanvasElement>(null);
+  const leaderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -97,8 +99,9 @@ export function Projector() {
     let dirty = true;
     let resizeTimer = 0;
     let motifTime = 0; // advances only while motion is on
+    const flicker = new Flicker();
     let builds: (Build & { beat?: Beat })[] = [];
-    const NAME_PRINT_AT = 0.35; // the name starts printing once the portrait's shadows are up
+    const NAME_PRINT_AFTER = 3; // film frames of scroll before the name starts printing
     let watching = false; // the film player is open: the screening rests
     // mouse parallax: everything but the menu leans a few px toward the pointer (fine pointers only)
     const finePointer = window.matchMedia("(pointer: fine)").matches;
@@ -237,9 +240,36 @@ export function Projector() {
       root.classList.toggle("on-red", !!b?.red);
     };
 
+    // The film leader on load: a countdown with a sweep hand on black, then the portrait develops.
+    // Scrolling, PROYECTOR off or reduced motion skip it.
+    let leaderStart = -1;
+    let leaderDone = reduced || !motion;
+    const leaderEl = leaderRef.current;
+    const endLeader = (now: number) => {
+      if (leaderDone) return;
+      leaderDone = true;
+      root.classList.remove("countdown-on");
+      const portrait = shots.find((x) => x.timer);
+      if (portrait && portrait.developStart < 0) portrait.developStart = now + 80; // a couple of frames of black
+    };
+    const runLeader = (now: number, film: number, y: number) => {
+      if (leaderDone) return;
+      if (!motion || y > 8) { endLeader(now); return; }
+      if (leaderStart < 0) { leaderStart = film; root.classList.add("countdown-on"); }
+      const f = film - leaderStart;
+      if (f >= CONFIG.leaderFrames) { endLeader(now); return; }
+      if (leaderEl) {
+        const inSecond = f % FPS;
+        leaderEl.style.setProperty("--a", `${((inSecond + 1) / FPS) * 360}deg`); // the sweep, stepped per film frame
+        const n = leaderEl.querySelector<HTMLElement>(".countdown-n");
+        const num = String(3 - Math.floor(f / FPS));
+        if (n && n.textContent !== num) n.textContent = num;
+      }
+    };
+
     const timerProgress = (s: ShotState, now: number) => {
       if (!motion) return 1;
-      if (s.developStart < 0) s.developStart = Math.max(now, pageStart + CONFIG.openingBlackMs);
+      if (s.developStart < 0) return 0; // still behind the leader
       return Math.min(1, Math.max(0, (now - s.developStart) / CONFIG.openingDevelopMs));
     };
 
@@ -291,6 +321,7 @@ export function Projector() {
       const moved = yFrame !== Math.floor(lastY / PX_PER_FRAME) || lastY < 0;
       if (moved) stream(y, vh);
 
+      runLeader(now, film, y);
       const st = evaluate(beats, y, !motion || reduced);
       setActive(st?.beat ?? null);
       if (st) {
@@ -334,6 +365,8 @@ export function Projector() {
         const rb = st?.beat.reel ? boxFor(vw, vh) : null;
         const reelBox = rb ? { ...rb, x: rb.x + par.x * PAR.box, y: rb.y + par.y * PAR.box, t: motifTime } : null;
         const wv = motion ? weave(WEAVE.picture, film) : { x: 0, y: 0, rot: 0 };
+        const cb = boxFor(vw, vh);
+        const cornerR = { r: cb.r, w: cb.w };
         const push = (s: ShotState, progress: number, extra: { wipe?: number; zoom?: number } = {}) => {
           if (!s.tex || !st) return;
           const r = s.el.getBoundingClientRect();
@@ -346,6 +379,8 @@ export function Projector() {
             rect: full ? { x: r.left, y: r.top, w: r.width, h: r.height } : { x: r.left + px, y: r.top + py, w: r.width, h: r.height },
             full, weave: full ? { ...wv, x: wv.x + px / r.height, y: wv.y - py / r.height } : wv,
             focal: s.el.dataset.focal ? (s.el.dataset.focal.split(",").map(Number) as [number, number]) : undefined,
+            // rounded corners scaled to the picture: the reel container's radius x (picture width / container width)
+            radius: full ? 0 : Math.max(4, cornerR.r * (r.width / Math.max(1, cornerR.w))),
             progress, develop: progress < 1, dye: CONFIG.dye, zoom: extra.zoom ?? st.zoom, fade: st.fade * st.beat.dim,
             box: reelBox, reveal, wipe: extra.wipe,
           });
@@ -386,7 +421,7 @@ export function Projector() {
             if (!sh?.tex) continue;
             let develop = st.develop;
             let hold = false;
-            if (sh.timer) { develop = timerProgress(sh, now); hold = now < sh.developStart; }
+            if (sh.timer) { develop = timerProgress(sh, now); hold = motion && (sh.developStart < 0 || now < sh.developStart); }
             const v = sh.el;
             if (v instanceof HTMLVideoElement) {
               if (v.dataset.loop !== undefined) {
@@ -422,11 +457,9 @@ export function Projector() {
           if (bd.beat !== b) continue;
           if (!motion) { completeBuild(bd); bd.el.style.opacity = ""; continue; }
           if (bd.el.dataset.clock === "opening") {
-            const portrait = shots.find((x) => x.timer);
-            const startMs = portrait && portrait.developStart > 0 ? portrait.developStart + NAME_PRINT_AT * CONFIG.openingDevelopMs : Infinity;
-            applyBuild(bd, Math.floor(((now - startMs) / 1000) * FPS), st.q, beatFrames);
-            // the name holds while the portrait finishes developing, then fades as the visitor moves on
-            const out = st.q > 0.5 ? Math.max(0, 1 - Math.floor((st.q - 0.5) * beatFrames) / 6) : 1;
+            // the name isn't there at first: it prints in as the visitor starts to scroll, holds, then fades
+            applyBuild(bd, framesIn - NAME_PRINT_AFTER, st.q, beatFrames);
+            const out = st.q > 0.62 ? Math.max(0, 1 - Math.floor((st.q - 0.62) * beatFrames) / 6) : 1;
             bd.el.style.opacity = out === 1 ? "" : String(out);
           } else {
             applyBuild(bd, framesIn, st.q, beatFrames);
@@ -436,7 +469,12 @@ export function Projector() {
 
       if (filmTick) {
         if (motion && lastFilm >= 0) motifTime += (film - lastFilm) / FPS;
-        if (film % Math.round(FPS / grainFps) === 0) grain.render(film, { ...CONFIG.grain, still: !motion });
+        if (film % Math.round(FPS / grainFps) === 0) {
+          // projector flicker rides on the grain canvas: random lifts and dips of the whole screen (off with PROYECTOR)
+          const fl = motion ? flicker.step(film) : 0;
+          if (!motion) flicker.reset();
+          grain.render(film, { ...CONFIG.grain, still: !motion, flicker: fl });
+        }
         if (active) {
           const tw = motion ? weave(WEAVE.title, film) : { x: 0, y: 0 }, sw = motion ? weave(WEAVE.subtitle, film) : { x: 0, y: 0 };
           for (const el of active.frame.querySelectorAll<HTMLElement>("[data-weave]")) {
@@ -553,7 +591,7 @@ export function Projector() {
         cancelAnimationFrame(raf);
         raf = requestAnimationFrame(loop);
         (window as unknown as { __projector?: object }).__projector = {
-          get beats() { return beats; }, get shots() { return shots; }, get active() { return active; }, contexts: 2,
+          get beats() { return beats; }, get shots() { return shots; }, get active() { return active; }, get flicker() { return flicker.value; }, contexts: 2,
         };
       } catch (e) {
         console.warn("[projector] engine unavailable, keeping the DOM page", e);
@@ -580,7 +618,7 @@ export function Projector() {
       pic?.dispose(); grain?.dispose();
       pic = null; grain = null;
       lenis?.destroy(); lenis = null;
-      root.classList.remove("projector-on", "film", "on-red");
+      root.classList.remove("projector-on", "film", "on-red", "countdown-on");
       root.style.removeProperty("--vf");
       root.style.removeProperty("--par-x");
       root.style.removeProperty("--par-y");
@@ -626,6 +664,14 @@ export function Projector() {
   return (
     <>
       <canvas ref={picRef} className="projector-canvas projector-picture" aria-hidden="true" />
+      {/* the film leader on load: rings, a cross, a sweep hand and the count */}
+      <div ref={leaderRef} className="countdown" aria-hidden="true">
+        <div className="countdown-sweep" />
+        <div className="countdown-ring countdown-ring--outer" />
+        <div className="countdown-ring countdown-ring--inner" />
+        <div className="countdown-cross" />
+        <span className="countdown-n">3</span>
+      </div>
       <canvas ref={grainRef} className="projector-canvas projector-grain" aria-hidden="true" />
     </>
   );

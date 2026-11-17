@@ -3,11 +3,11 @@ import { site, films, portraits, openingShots } from "@/content/site";
 import { Picture, Window } from "./Picture";
 import { WatchFilm } from "./Player";
 
-/** Italicise the final word of a phrase (one italic word per card at most). */
+/** Italicise the final word of a phrase, its punctuation included ("next." moves as one piece). */
 function WithItalicEnd({ text }: { text: string }) {
-  const m = text.match(/^(.*\s)(\S+?)([.!?’”]*)$/);
+  const m = text.match(/^(.*\s)(\S+)$/);
   if (!m) return <>{text}</>;
-  return (<>{m[1]}<em>{m[2]}</em>{m[3]}</>);
+  return (<>{m[1]}<em>{m[2]}</em></>);
 }
 
 type Hold = "short" | "normal" | "long" | "t-short" | "t-normal" | "t-long" | "t-five" | "roll" | "seq";

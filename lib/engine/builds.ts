@@ -23,6 +23,9 @@ export type Build = {
 };
 
 const NBSP = /\s/;
+const BONE = [236, 230, 218];
+/** The safelit paper the pictures develop on (picture shader uPaper 0.30, 0.075, 0.05). */
+const SAFELIGHT_PAPER = [77, 19, 13];
 
 function seededOrder(n: number, frames: number, seed: number): number[] {
   // uneven exposure order: shuffle the letters, then give them irregular gaps that fill `frames`
@@ -128,12 +131,26 @@ export function applyBuild(b: Build, f: number, q: number, beatFrames: number) {
       }
     });
   } else if (b.kind === "late") {
-    // rest: arrives with the beat, leaves from 72% over 4 frames. Italic word: arrives at 30% over 6 frames.
+    // rest: arrives with the beat, leaves from 72% over 4 frames. Italic word ("next."): arrives at 30% over 6 frames,
+    // holds alone, then from 80% sinks into the safelight's dim red, the tone pictures develop in, in stepped
+    // frames, before the scene fades it to black.
     const restOut = q >= 0.72 ? 1 - step((q - 0.72) * beatFrames, 4) : 1;
     const wordIn = q >= 0.3 ? step((q - 0.3) * beatFrames, 6) : 0;
+    // stepped per film frame from 78%; fully red by 95% (and through the rest that follows)
+    const redFrames = Math.max(1, Math.floor(0.17 * beatFrames));
+    const toRed = f === Infinity ? 0 : q >= 0.78 ? Math.min(1, Math.floor((q - 0.78) * beatFrames + 1e-6) / redFrames) : 0;
     b.units.forEach((u) => {
-      const o = u.tagName === "EM" ? wordIn : restOut;
-      u.style.opacity = f === Infinity ? "" : String(o);
+      const isWord = u.tagName === "EM";
+      u.style.opacity = f === Infinity ? "" : String(isWord ? wordIn : restOut);
+      if (isWord) {
+        if (toRed > 0) {
+          const c = SAFELIGHT_PAPER.map((v, i) => Math.round(BONE[i] + (v - BONE[i]) * toRed));
+          u.style.color = `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+          u.style.textShadow = `0 0 22px rgb(${c[0]} ${c[1]} ${c[2]} / ${(0.1 + 0.25 * toRed).toFixed(2)})`;
+        } else if (u.style.color) {
+          u.style.color = ""; u.style.textShadow = "";
+        }
+      }
     });
   } else if (b.kind === "words") {
     // group k sets at k/n of the hold, over 6 frames
@@ -147,5 +164,5 @@ export function applyBuild(b: Build, f: number, q: number, beatFrames: number) {
 }
 
 export function completeBuild(b: Build) {
-  for (const u of b.units) { u.style.opacity = ""; u.style.transform = ""; }
+  for (const u of b.units) { u.style.opacity = ""; u.style.transform = ""; u.style.color = ""; u.style.textShadow = ""; }
 }

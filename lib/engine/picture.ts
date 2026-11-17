@@ -59,6 +59,7 @@ const FRAG = FRAG_PREFIX + /* glsl */ `
 ${COMMON_GLSL}
 uniform sampler2D uTex;
 uniform float uWipe;      // shutter wipe inside the picture: -1 off, else the edge 0..1 from the top
+uniform float uRadius;    // rounded corners in px (windows), scaled to the picture; 0 = square
 uniform vec4 uRect;       // picture rect in screen uv (x, y, w, h), origin bottom-left
 uniform vec2 uUvScale;    // cover crop (full-bleed, and windows whose shape differs from the picture)
 uniform vec2 uFocal;      // crop offset towards the subject, uv units
@@ -82,6 +83,13 @@ void main() {
   if (l.x < 0.0 || l.x > 1.0 || l.y < 0.0 || l.y > 1.0) { gl_FragColor = vec4(0.0); return; }
   vec2 px = vec2(vUv.x * uView.x, (1.0 - vUv.y) * uView.y);
   float alpha = boxMask(px) * revealMask(px);
+  if (uRadius > 0.0) {
+    // rounded corners in the picture's own px, soft by a pixel so they stay smooth on any screen
+    vec2 lp = l * uRectPx, hs = uRectPx * 0.5;
+    vec2 q = abs(lp - hs) - (hs - uRadius);
+    float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - uRadius;
+    alpha *= 1.0 - smoothstep(-0.75, 0.75, d);
+  }
   // the next picture rolls in on a shutter: rows near the edge slip sideways a touch, a thin line of light
   float wipeLine = 0.0;
   if (uWipe >= 0.0) {
@@ -200,6 +208,8 @@ export type Slot = {
   fade?: number;
   /** Subject position (0..1 from the top-left) that crops keep in frame. */
   focal?: [number, number];
+  /** Rounded corners in px (0 = square). */
+  radius?: number;
   /** Clip to the reel container; rolling-shutter reveal (1 = revealed); shutter wipe inside the picture (-1 = off). */
   box?: Box | null;
   reveal?: number;
@@ -288,7 +298,7 @@ export class PictureEngine {
             .f("uShift", 0, 0).f("uOverscan", 0).f("uRot", 0);
         }
         p.f("uRectPx", r.w, r.h).f("uProgress", s.progress).f("uDevelop", s.develop ? 1 : 0).f("uDye", s.dye)
-          .f("uZoom", s.zoom ?? 1).f("uFade", s.fade ?? 1).f("uWipe", s.wipe ?? -1);
+          .f("uZoom", s.zoom ?? 1).f("uFade", s.fade ?? 1).f("uWipe", s.wipe ?? -1).f("uRadius", s.radius ?? 0);
         setBox(p, s.box, s.reveal, vw, vh);
         s.tex.bind(0);
         p.draw();

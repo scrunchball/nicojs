@@ -17,6 +17,8 @@ export type GrainState = {
   scale: number;
   /** Freeze on one plate (reduced motion). */
   still: boolean;
+  /** Projector flicker: a small lift (+) or dip (-) of the whole screen's lightness. 0 = none. */
+  flicker?: number;
 };
 
 const FRAG = `#version 300 es
@@ -28,13 +30,14 @@ uniform vec2 uOffset;
 uniform float uPx;       // device px per CSS px (canvas pixel ratio)
 uniform float uScale;    // CSS px per texel
 uniform float uStrength;
+uniform float uFlicker;  // whole-screen lift/dip: soft-light grey above 0.5 lightens everything, below darkens
 out vec4 fragColor;
 void main() {
   vec2 css = gl_FragCoord.xy / uPx;
   vec2 uv = css / (${PLATE}.0 * uScale) + uOffset;
   float g = texture(uPlates, vec3(uv, uLayer)).r;   // plates: mean 0.5, std 0.2
   // grey around 0.5 (neutral in soft-light). Strength 0.06 => ~1.8% std on a midtone, ~1.7 levels on Gate black.
-  float v = 0.5 + (g - 0.5) * uStrength * 4.0;
+  float v = 0.5 + (g - 0.5) * uStrength * 4.0 + uFlicker;
   fragColor = vec4(vec3(v), 1.0);
 }
 `;
@@ -120,6 +123,7 @@ export class GrainEngine {
         .f("uPx", this.dpr)
         .f("uScale", s.scale)
         .f("uStrength", s.strength)
+        .f("uFlicker", s.flicker ?? 0)
         .draw();
     });
     this.cpuMs = this.cpuMs * 0.9 + (performance.now() - t0) * 0.1;

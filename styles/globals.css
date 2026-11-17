@@ -346,3 +346,26 @@ html.film .frame-slot[data-active] > .frame { transform: translate3d(var(--par-x
   .viewfinder { --vfi: 8vh; --vfx: 3vw; }
 }
 html.watching .index { display: none; } /* the player has its own CLOSE */
+
+/* ---------- Pictures: rounded corners scaled to their size (the canvas draws them; this is the plain page's) ---------- */
+.window .pic { border-radius: clamp(4px, 1.1vw, 16px); }
+
+/* ---------- The film leader on load (film mode only) ---------- */
+.countdown { display: none; position: fixed; inset: 0; z-index: 45; pointer-events: none; --a: 0deg; --d: min(52vmin, 460px); }
+html.countdown-on .countdown { display: block; }
+html.countdown-on main { opacity: 0; } /* nothing but the leader until the film starts */
+.countdown > * { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.countdown-sweep { width: var(--d); height: var(--d); border-radius: 50%;
+  background: conic-gradient(from 0deg, rgb(236 230 218 / 0.13) 0deg var(--a), rgb(236 230 218 / 0.03) var(--a) 360deg); }
+.countdown-ring { border-radius: 50%; border: 1px solid rgb(154 148 138 / 0.55); }
+.countdown-ring--outer { width: var(--d); height: var(--d); }
+.countdown-ring--inner { width: calc(var(--d) * 0.78); height: calc(var(--d) * 0.78); }
+.countdown-cross { width: calc(var(--d) * 1.5); height: calc(var(--d) * 1.1);
+  background:
+    linear-gradient(rgb(154 148 138 / 0.45), rgb(154 148 138 / 0.45)) center / 100% 1px no-repeat,
+    linear-gradient(rgb(154 148 138 / 0.45), rgb(154 148 138 / 0.45)) center / 1px 100% no-repeat; }
+.countdown-n { font-family: var(--font-serif); font-size: calc(var(--d) * 0.5); line-height: 1; color: var(--bone);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 50%, rgb(0 0 0 / 0.8) 100%); mask-image: radial-gradient(ellipse at center, #000 50%, rgb(0 0 0 / 0.8) 100%);
+  text-shadow: 0 0 22px rgb(236 230 218 / 0.12); }
+/* until the engine is ready, the name stays hidden too (it prints in on scroll) */
+html.projector-pending .name { opacity: 0; }
