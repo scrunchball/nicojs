@@ -10,6 +10,7 @@ import "@fontsource/instrument-serif/latin-400-italic.css";
 import "@fontsource/instrument-serif/latin-ext-400-italic.css";
 import "@fontsource/courier-prime/latin-400.css";
 import "@fontsource/courier-prime/latin-700.css";
+import "lenis/dist/lenis.css";
 import "@/styles/tokens.css";
 import "@/styles/globals.css";
 

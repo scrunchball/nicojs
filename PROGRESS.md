@@ -27,7 +27,7 @@ Not yet done / caveats:
 - GPU time not measured on target hardware: recordings come from software WebGL (SwiftShader). Needs a check on an M1 Air and a recent iPhone in the lab's Frame time readout.
 - "From negative" variant (optional, off by default) not built.
 
-## Stage 4: Projector (branch `stage-04-projector`): built, awaiting Adam's review
+## Stage 4: Projector: approved ("continue"), merged into the Stage 5 branch
 Done:
 - Placeholder media for all 13 slots (`public/media/`, labelled with their filename); swap guide in `docs/MEDIA.md`.
 - Reels now follow the brief: key full-bleed + subtitle, 3 shots in alternating windows (one a clip), second sentence, last shot, links. Opening uses film 1 large right + film 2 small left; Behind the camera has two portraits.
@@ -39,8 +39,21 @@ Not yet / caveats:
 - Development on scroll, cuts, scrub and the PROYECTOR motion toggle are Stage 5. Clips loop for now.
 - All media are placeholders until Adam uploads Nico's frames and clips.
 
+## Stage 5: Timeline and cuts (branch `stage-05-timeline`): built, awaiting Adam's review
+Done:
+- Film mode: the page plays as one pinned film; scroll is the projector. 46 beats compiled from the DOM (holds per the brief, phone 70% / tablet 85% lengths), rests of black between scenes.
+- Moves: develop (first picture of a scene and any picture after text/black, over the first 45% of the hold), cut (instant, on a film frame), push-in (stills 1.00 -> 1.04), scrub (all-intra encode, clip time = hold progress, holds the last frame), arrive (6 stepped frames) / leave (4), fade to black through the rest. Scrolling back runs it in reverse.
+- Lenis inertia scroll (lerp 0.09), off under reduced motion. Timecode HH:MM:SS:FF at 24 fps, 8 px per frame.
+- PROYECTOR is now a real motion toggle. Chrome switches to Bone/Ink over the red end title (Stage 2 issue fixed). Tabbing to a link in a beat that isn't playing moves the film there.
+- Checks: cuts land exactly on beat boundaries and the timecode matches (0 errors over 11 boundaries); scrub maps 0.1/0.5/0.9 -> 0.8/4.0/7.2 s of 8 s, forward and back; reverse frames identical to forward (motion paused); 2 WebGL contexts; no errors. Full-length recording forward and back in `docs/stage-05/`.
+
+Not yet / caveats:
+- "No dropped frames on desktop" can't be judged from here (software WebGL). Check on a real Mac: scroll the whole film and watch the timecode.
+- Scrubbing needs HTTP range requests: works on Cloudflare Pages; Python's http.server can't seek (use `npx serve out` locally).
+- Name build, intertitle/festival/end-title builds and the pacing pass are Stage 6.
+
 ## Not started
-Stage 5 timeline, 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
+Stage 6 transitions and titles, 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 
 ## Waiting on Adam / Nico
 - Cloudflare account and Pages connection.

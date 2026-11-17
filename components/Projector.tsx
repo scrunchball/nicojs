@@ -1,45 +1,49 @@
 "use client";
 
 /**
- * The Projector (Stage 4): runs the film engine on the real page.
+ * The Projector: runs the film on the real page (Stages 4 and 5).
  *
  * - Two WebGL contexts for the whole site: the picture canvas (behind the text) and the grain canvas
  *   (over everything, interface included).
- * - Every picture slot is a real server-rendered <img>/<video> ([data-shot]). The Projector streams each
- *   slot's texture in as it approaches the viewport, draws it at the slot's on-screen rect, and only then
- *   fades the DOM element out, so a slot is never blank: until the canvas has it, the DOM shows it.
- * - Text groups ([data-weave]) weave on their own seeds with CSS transforms; the chrome never weaves.
- * - Context loss: the DOM pictures come back instantly, and the engine rebuilds on restore.
- * - No WebGL2, or an engine error: nothing changes, the DOM page (fallback levels 3 and 5) stays.
+ * - Film mode (html.film): every beat ([.frame-slot]) becomes a spacer as tall as its scroll length and
+ *   its screen (.frame) is pinned. The timeline (lib/engine/timeline.ts) says which beat is on screen;
+ *   pictures cut, develop, push in and fade to black; clips scrub; text arrives and leaves in stepped
+ *   film frames. Scrolling back runs the film in reverse. 1 film frame = 8 px of scroll.
+ * - Lenis gives inertia scrolling (off under reduced motion). The canvases are fixed and read the timeline.
+ * - Every picture is a real <img>/<video> in the DOM. Textures stream in for beats near the playhead and
+ *   the DOM picture fades out only once the canvas has drawn it, so a shot is never blank.
+ * - PROYECTOR in the projector line stops all automatic motion (weave, grain, timers) for anyone.
+ * - No WebGL2 or an engine error: nothing changes, the plain DOM page stays (fallback levels 3 and 5).
  */
 import { useEffect, useRef } from "react";
 import type * as T from "three";
 import { FPS, WEAVE, frameAt, weave } from "@/lib/engine/film";
-import type { PictureEngine, Slot as DrawSlot } from "@/lib/engine/picture";
+import type { PictureEngine } from "@/lib/engine/picture";
 import type { GrainEngine } from "@/lib/engine/grain";
+import { PX_PER_FRAME, compile, evaluate, timecode, type Beat } from "@/lib/engine/timeline";
 
 const CONFIG = {
   grain: { strength: 0.06, density: 2, scale: 1 },
   dye: 0.03,
   openingBlackMs: 1000, // black and grain for 1 s on load
   openingDevelopMs: 2500, // then the portrait develops on a 2.5 s timer
-  nearMargin: "150% 0px", // start streaming a texture 1.5 viewports ahead
-  farMargin: "400% 0px", // free it beyond 4 viewports
+  nearAhead: 3, // viewports ahead of the playhead to stream textures
+  nearBehind: 1.5,
+  farAhead: 6, // free textures beyond these
+  farBehind: 4,
+  lerp: 0.09,
 };
 
-type SlotState = {
+type ShotState = {
   el: HTMLImageElement | HTMLVideoElement;
-  id: string;
-  full: boolean;
-  kind: "image" | "clip";
+  beat: Beat;
   timer: boolean;
-  near: boolean;
-  visible: boolean;
   loading: boolean;
   tex: T.Texture | null;
   aspect: number;
+  duration: number;
   drawn: boolean;
-  developStart: number; // ms, opening portrait only
+  developStart: number;
 };
 
 export function Projector() {
@@ -48,8 +52,9 @@ export function Projector() {
 
   useEffect(() => {
     const root = document.documentElement;
-    const done = () => root.classList.remove("projector-pending");
-    if (!("WebGL2RenderingContext" in window) || !picRef.current || !grainRef.current) { done(); return; }
+    const main = document.querySelector<HTMLElement>("main");
+    const pending = () => root.classList.remove("projector-pending");
+    if (!("WebGL2RenderingContext" in window) || !picRef.current || !grainRef.current || !main) { pending(); return; }
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const phone = window.matchMedia("(max-width: 809px)").matches;
@@ -57,46 +62,52 @@ export function Projector() {
     const grainFps = phone ? 12 : FPS;
     const pageStart = performance.now();
 
+    let motion = !reduced;
+    try { if (sessionStorage.getItem("projector") === "off") motion = false; } catch {}
+
     let pic: PictureEngine | null = null;
     let grain: GrainEngine | null = null;
     let THREE: typeof import("three") | null = null;
+    let lenis: import("lenis").default | null = null;
     let raf = 0;
     let disposed = false;
     let lost = false;
-    let lastFilm = -1;
-    let lastScroll = -1;
-    let lastW = 0, lastH = 0;
+    let beats: Beat[] = [];
+    let shots: ShotState[] = [];
+    let active: Beat | null = null;
+    let lastFilm = -1, lastY = -1, lastW = 0, lastH = 0, lastTc = -1;
+    let dirty = true;
+    let resizeTimer = 0;
 
-    const slots: SlotState[] = Array.from(document.querySelectorAll<HTMLImageElement | HTMLVideoElement>("[data-shot]")).map((el) => ({
-      el,
-      id: el.dataset.shot!,
-      full: el.dataset.mode === "full",
-      kind: el instanceof HTMLVideoElement ? "clip" : "image",
-      timer: el.dataset.develop === "timer" && !reduced,
-      near: false, visible: false, loading: false, tex: null,
-      aspect: (Number(el.getAttribute("width")) || 16) / (Number(el.getAttribute("height")) || 9),
-      drawn: false, developStart: -1,
-    }));
-    const byEl = new Map<Element, SlotState>(slots.map((s) => [s.el, s]));
-    const weavers = Array.from(document.querySelectorAll<HTMLElement>("[data-weave]"));
+    const tcEl = document.querySelector<HTMLElement>("[data-timecode]");
+    const toggle = document.querySelector<HTMLButtonElement>("[data-projector-toggle]");
+    const dot = document.querySelector<HTMLElement>("[data-projector-dot]");
+    const syncToggle = () => {
+      toggle?.setAttribute("aria-pressed", String(motion));
+      if (dot) dot.textContent = motion ? "●" : "○";
+    };
 
-    const release = (s: SlotState) => {
+    /* ---------- textures ---------- */
+
+    const release = (s: ShotState) => {
       s.tex?.dispose();
       s.tex = null;
       s.drawn = false;
       s.loading = false;
       delete s.el.dataset.ready;
-      if (s.el instanceof HTMLVideoElement) s.el.pause();
     };
 
-    const prepare = async (s: SlotState) => {
+    const prepare = async (s: ShotState) => {
       if (s.tex || s.loading || !pic || lost) return;
       s.loading = true;
       try {
         if (s.el instanceof HTMLVideoElement) {
-          if (reduced) { s.loading = false; return; } // the poster stays in the DOM
+          if (reduced) { s.loading = false; return; } // no scrubbing: the poster stays in the DOM
           const v = s.el;
+          const scrub = v.dataset.scrub;
+          if (scrub && !v.src.endsWith(scrub)) { v.src = scrub; } // all-intra encode: frame-accurate seeking
           v.preload = "auto";
+          v.pause();
           if (v.readyState < 2) {
             v.load();
             await new Promise<void>((res, rej) => {
@@ -104,50 +115,81 @@ export function Projector() {
               v.addEventListener("error", () => rej(new Error(`clip failed: ${v.currentSrc}`)), { once: true });
             });
           }
-          if (!s.near || !pic) { s.loading = false; return; }
+          if (!pic || !s.beat.slot.dataset.near) { s.loading = false; return; }
           s.aspect = v.videoWidth / v.videoHeight || s.aspect;
-          s.tex = pic.createTexture(v);
-          if (s.visible) v.play().catch(() => {});
+          s.duration = v.duration || 0;
+          const tex = pic.createTexture(v);
+          v.addEventListener("seeked", () => { tex.needsUpdate = true; dirty = true; });
+          s.tex = tex;
         } else {
           const img = s.el;
           img.loading = "eager";
           if (!img.complete || !img.naturalWidth) await img.decode();
           else await img.decode().catch(() => {});
-          if (!s.near || !pic) { s.loading = false; return; }
+          if (!pic || !s.beat.slot.dataset.near) { s.loading = false; return; }
           s.aspect = img.naturalWidth / img.naturalHeight || s.aspect;
           s.tex = pic.createTexture(img);
           pic.upload(s.tex);
         }
+        dirty = true;
       } catch (e) {
         console.warn("[projector]", e); // the DOM element keeps showing this shot
       }
       s.loading = false;
     };
 
-    const near = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        const s = byEl.get(e.target)!;
-        if (e.isIntersecting) { s.near = true; prepare(s); }
-      }
-    }, { rootMargin: CONFIG.nearMargin });
-    const far = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        const s = byEl.get(e.target)!;
-        if (!e.isIntersecting) { s.near = false; release(s); }
-      }
-    }, { rootMargin: CONFIG.farMargin });
-    const vis = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        const s = byEl.get(e.target)!;
-        s.visible = e.isIntersecting;
-        if (s.el instanceof HTMLVideoElement && s.tex) {
-          if (s.visible) s.el.play().catch(() => {}); else s.el.pause();
+    /** Stream textures for beats near the playhead; free the far ones. */
+    const stream = (y: number, vh: number) => {
+      for (const s of shots) {
+        const b = s.beat;
+        const near = b.end > y - CONFIG.nearBehind * vh && b.start < y + CONFIG.nearAhead * vh;
+        const far = b.end < y - CONFIG.farBehind * vh || b.start > y + CONFIG.farAhead * vh;
+        if (near) {
+          if (!b.slot.dataset.near) b.slot.dataset.near = "1";
+          prepare(s);
+        } else if (far && (s.tex || b.slot.dataset.near)) {
+          delete b.slot.dataset.near;
+          release(s);
         }
       }
-    }, { rootMargin: "10% 0px" });
+    };
 
-    const progressOf = (s: SlotState, now: number) => {
-      if (!s.timer) return 1;
+    /* ---------- the film ---------- */
+
+    const build = () => {
+      const vh = window.innerHeight;
+      // keep the playhead on the same beat through a resize
+      const prev = active ? { i: active.index, q: (window.scrollY - active.start) / Math.max(1, active.end - active.start) } : null;
+      const out = compile(main, vh, window.innerWidth);
+      beats = out.beats;
+      const old = new Map(shots.map((s) => [s.el, s]));
+      shots = beats.filter((b) => b.shot).map((b) => {
+        const s = old.get(b.shot!);
+        if (s) { s.beat = b; return s; }
+        return {
+          el: b.shot!, beat: b, timer: b.shot!.dataset.develop === "timer", loading: false, tex: null,
+          aspect: (Number(b.shot!.getAttribute("width")) || 16) / (Number(b.shot!.getAttribute("height")) || 9),
+          duration: 0, drawn: false, developStart: -1,
+        };
+      });
+      if (prev && beats[prev.i]) {
+        const b = beats[prev.i];
+        const y = b.start + prev.q * (b.end - b.start);
+        lenis ? lenis.scrollTo(y, { immediate: true }) : window.scrollTo(0, y);
+      }
+      dirty = true;
+    };
+
+    const setActive = (b: Beat | null) => {
+      if (b === active) return;
+      if (active) { delete active.slot.dataset.active; active.frame.style.opacity = ""; }
+      active = b;
+      if (b) b.slot.dataset.active = "1";
+      root.classList.toggle("on-red", !!b?.red);
+    };
+
+    const timerProgress = (s: ShotState, now: number) => {
+      if (!motion) return 1;
       if (s.developStart < 0) s.developStart = Math.max(now, pageStart + CONFIG.openingBlackMs);
       return Math.min(1, Math.max(0, (now - s.developStart) / CONFIG.openingDevelopMs));
     };
@@ -155,52 +197,92 @@ export function Projector() {
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop);
       if (!pic || !grain || lost) return;
+      lenis?.raf(now);
+      const y = window.scrollY;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      if (vw !== lastW || vh !== lastH) {
+        pic.resize(); grain.resize();
+        const big = vw !== lastW || Math.abs(vh - lastH) > 120; // ignore mobile browser bars
+        lastW = vw; lastH = vh;
+        if (big) { clearTimeout(resizeTimer); resizeTimer = window.setTimeout(build, 150); }
+      }
       const film = frameAt(now);
       const filmTick = film !== lastFilm;
-      const scrolled = window.scrollY !== lastScroll;
-      const w = window.innerWidth, h = window.innerHeight;
-      if (w !== lastW || h !== lastH) { pic.resize(); grain.resize(); lastW = w; lastH = h; }
+      const yFrame = Math.floor(y / PX_PER_FRAME);
+      const moved = yFrame !== Math.floor(lastY / PX_PER_FRAME) || lastY < 0;
+      if (moved) stream(y, vh);
 
-      const draw: DrawSlot[] = [];
-      let moving = false;
-      for (const s of slots) {
-        if (!s.visible || !s.tex) continue;
-        const r = s.el.getBoundingClientRect();
-        if (r.bottom < 0 || r.top > h || r.width === 0) continue;
-        const progress = progressOf(s, now);
-        if (progress < 1 || s.kind === "clip") moving = true;
-        if (s.timer && now < s.developStart) continue; // opening: black and grain first
-        draw.push({
-          tex: s.tex, aspect: s.aspect, rect: { x: r.left, y: r.top, w: r.width, h: r.height }, full: s.full,
-          weave: reduced ? { x: 0, y: 0, rot: 0 } : weave(WEAVE.picture, film),
-          progress, develop: progress < 1, dye: CONFIG.dye,
-        });
+      const st = evaluate(beats, y, !motion || reduced);
+      setActive(st?.beat ?? null);
+      if (st) st.beat.frame.style.opacity = String(st.opacity);
+
+      if (tcEl && yFrame !== lastTc) { tcEl.textContent = timecode(y); lastTc = yFrame; }
+
+      // picture
+      const shot = st?.beat.shot ? shots.find((s) => s.el === st.beat.shot) : undefined;
+      const timerRunning = !!shot?.timer && shot.tex !== null && timerProgress(shot, now) < 1;
+      if (moved || filmTick || dirty || timerRunning) {
+        const draw = [];
+        if (st && shot?.tex) {
+          let develop = st.develop;
+          let hold = false;
+          if (shot.timer) { develop = timerProgress(shot, now); hold = now < shot.developStart; }
+          if (shot.el instanceof HTMLVideoElement && shot.duration) {
+            const t = Math.min(shot.duration - 1 / FPS, st.q * shot.duration); // holds the last frame
+            if (Math.abs(shot.el.currentTime - t) > 0.5 / FPS) shot.el.currentTime = t;
+          }
+          const r = shot.el.getBoundingClientRect();
+          if (!hold && r.width > 0) {
+            draw.push({
+              tex: shot.tex, aspect: shot.aspect, rect: { x: r.left, y: r.top, w: r.width, h: r.height },
+              full: shot.el.dataset.mode === "full",
+              weave: motion ? weave(WEAVE.picture, film) : { x: 0, y: 0, rot: 0 },
+              progress: develop, develop: develop < 1, dye: CONFIG.dye, zoom: st.zoom, fade: st.fade,
+            });
+          }
+        }
+        pic.frame(draw);
+        if (draw.length && shot && !shot.drawn) {
+          shot.drawn = true;
+          shot.el.dataset.ready = "1"; // the canvas has it now: fade the DOM picture out
+        }
+        if (shot?.timer && shot.drawn) pending();
+        dirty = false;
       }
 
-      // The picture canvas follows scroll every display frame; weave and grain step on film frames.
-      if (scrolled || filmTick || moving) {
-        pic.frame(draw);
-        for (const s of slots) {
-          if (s.tex && s.visible && !s.drawn && draw.some((d) => d.tex === s.tex)) {
-            s.drawn = true;
-            s.el.dataset.ready = "1"; // the canvas has it now: fade the DOM picture out
-            if (s.timer) done();
+      if (filmTick) {
+        if (film % Math.round(FPS / grainFps) === 0) grain.render(film, { ...CONFIG.grain, still: !motion });
+        if (active) {
+          const tw = motion ? weave(WEAVE.title, film) : { x: 0, y: 0 }, sw = motion ? weave(WEAVE.subtitle, film) : { x: 0, y: 0 };
+          for (const el of active.frame.querySelectorAll<HTMLElement>("[data-weave]")) {
+            const o = el.dataset.weave === "title" ? tw : sw;
+            el.style.transform = motion ? `translate3d(${o.x.toFixed(2)}px, ${o.y.toFixed(2)}px, 0)` : "";
           }
         }
       }
-      if (filmTick && (film % (FPS / grainFps) === 0 || grainFps === FPS)) {
-        grain.render(film, { ...CONFIG.grain, still: reduced });
-      }
-      if (filmTick && !reduced) {
-        const tw = weave(WEAVE.title, film), sw = weave(WEAVE.subtitle, film);
-        for (const el of weavers) {
-          const o = el.dataset.weave === "title" ? tw : sw;
-          el.style.transform = `translate3d(${o.x.toFixed(2)}px, ${o.y.toFixed(2)}px, 0)`;
-        }
-      }
       lastFilm = film;
-      lastScroll = window.scrollY;
+      lastY = y;
     };
+
+    /* ---------- interaction ---------- */
+
+    const onToggle = () => {
+      motion = !motion && !reduced ? true : false;
+      try { sessionStorage.setItem("projector", motion ? "on" : "off"); } catch {}
+      syncToggle();
+      dirty = true;
+    };
+    // Keyboard: focusing a link in a beat that isn't playing moves the film to that beat.
+    const onFocus = (e: FocusEvent) => {
+      const slot = (e.target as HTMLElement).closest<HTMLElement>(".frame-slot");
+      const b = slot && beats.find((x) => x.slot === slot);
+      if (b && b !== active) {
+        const y = b.start + PX_PER_FRAME * 8;
+        lenis ? lenis.scrollTo(y, { immediate: true }) : window.scrollTo(0, y);
+      }
+    };
+
+    /* ---------- lifecycle ---------- */
 
     const init = async () => {
       try {
@@ -212,13 +294,20 @@ export function Projector() {
         grain = new GrainEngine(THREE, grainRef.current, maxDpr);
         await grain.load(CONFIG.grain.density);
         if (disposed) return;
+        if (!reduced && !lenis) {
+          const { default: Lenis } = await import("lenis");
+          lenis = new Lenis({ lerp: CONFIG.lerp, anchors: true, autoRaf: false });
+        }
         lost = false;
-        lastFilm = -1; lastScroll = -1; lastW = 0;
-        root.classList.add("projector-on");
-        for (const s of slots) { near.observe(s.el); far.observe(s.el); vis.observe(s.el); }
+        root.classList.add("projector-on", "film");
+        build();
+        lastFilm = -1; lastY = -1; lastW = window.innerWidth; lastH = window.innerHeight; dirty = true;
+        syncToggle();
         cancelAnimationFrame(raf);
         raf = requestAnimationFrame(loop);
-        (window as unknown as { __projector?: object }).__projector = { slots, contexts: 2 };
+        (window as unknown as { __projector?: object }).__projector = {
+          get beats() { return beats; }, get shots() { return shots; }, get active() { return active; }, contexts: 2,
+        };
       } catch (e) {
         console.warn("[projector] engine unavailable, keeping the DOM page", e);
         teardown();
@@ -227,29 +316,30 @@ export function Projector() {
 
     const teardown = () => {
       cancelAnimationFrame(raf);
-      near.disconnect(); far.disconnect(); vis.disconnect();
-      for (const s of slots) release(s);
-      for (const el of weavers) el.style.transform = "";
+      clearTimeout(resizeTimer);
+      for (const s of shots) release(s);
+      setActive(null);
+      for (const b of beats) { b.slot.style.height = ""; b.frame.style.opacity = ""; delete b.slot.dataset.near; }
+      for (const sec of main.querySelectorAll<HTMLElement>("section.scene")) sec.style.paddingBottom = "";
+      main.style.paddingBottom = "";
+      for (const el of main.querySelectorAll<HTMLElement>("[data-weave]")) el.style.transform = "";
       pic?.dispose(); grain?.dispose();
       pic = null; grain = null;
-      root.classList.remove("projector-on");
-      done();
+      lenis?.destroy(); lenis = null;
+      root.classList.remove("projector-on", "film", "on-red");
+      pending();
     };
 
-    // Context loss: show the DOM pictures again right away, rebuild when the browser restores the context.
-    const onLost = (e: Event) => {
-      e.preventDefault();
-      lost = true;
-      for (const s of slots) release(s);
-      root.classList.remove("projector-on");
-      done();
-    };
+    // Context loss: the plain page comes back at once; the engine rebuilds when the context is restored.
+    const onLost = (e: Event) => { e.preventDefault(); lost = true; teardown(); };
     const onRestored = () => { teardown(); init(); };
     const canvases = [picRef.current, grainRef.current];
     for (const c of canvases) {
       c.addEventListener("webglcontextlost", onLost);
       c.addEventListener("webglcontextrestored", onRestored);
     }
+    toggle?.addEventListener("click", onToggle);
+    document.addEventListener("focusin", onFocus);
 
     init();
     return () => {
@@ -258,6 +348,8 @@ export function Projector() {
         c.removeEventListener("webglcontextlost", onLost);
         c.removeEventListener("webglcontextrestored", onRestored);
       }
+      toggle?.removeEventListener("click", onToggle);
+      document.removeEventListener("focusin", onFocus);
       teardown();
     };
   }, []);

@@ -104,3 +104,20 @@ main { position: relative; z-index: 1; }
 .projector-grain { z-index: 60; mix-blend-mode: overlay; } /* over everything, interface included */
 html.projector-on .pic[data-ready] { opacity: 0; } /* the canvas is drawing this shot */
 html.projector-pending .pic[data-develop="timer"] { opacity: 0; } /* opening: black, then the portrait develops */
+
+/* ---------- Film mode (Stage 5): the page plays as one pinned film; scroll is the projector ---------- */
+html.film .frame-slot { position: relative; }
+html.film .frame-slot > .frame { position: fixed; inset: 0; min-height: 0; opacity: 0; pointer-events: none; }
+html.film .frame-slot[data-active] > .frame { pointer-events: auto; }
+html.film .frame-slot:not([data-near]) .pic { display: none; } /* far shots don't load until near */
+html.film { scroll-behavior: auto; }
+
+.projector-toggle { display: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
+  background: none; border: 0; padding: 0; cursor: pointer; min-height: 24px; }
+html.projector-on .projector-toggle { display: inline; }
+html.projector-on .projector-static { display: none; }
+.chrome-projector .projector-toggle:hover { color: var(--bone); }
+
+/* Chrome over the red end title: Bone, with the active item in Ink (Safelight on red would vanish) */
+html.on-red .chrome a, html.on-red .chrome-projector, html.on-red .chrome-nav .langs { color: var(--bone); }
+html.on-red .chrome-nav a[aria-current="true"], html.on-red .chrome-nav a:hover { color: var(--ink-on-red); }

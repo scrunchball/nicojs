@@ -26,10 +26,14 @@ export function Chrome({ locale }: { locale: string }) {
           ))}
         </ul>
       </nav>
-      <div className="chrome chrome-projector label" aria-hidden="true">
-        <span>00:00:00:00</span>
-        <span>{t("markers.projector")} ●</span>
-        <span>{t("markers.sound")} ○</span>
+      <div className="chrome chrome-projector label">
+        <span data-timecode aria-hidden="true">00:00:00:00</span>
+        {/* Static without the film engine; a real motion toggle once the Projector runs (WCAG 2.2.2). */}
+        <span className="projector-static" aria-hidden="true">{t("markers.projector")} ●</span>
+        <button type="button" className="projector-toggle" data-projector-toggle aria-pressed="true">
+          {t("markers.projector")} <span aria-hidden="true" data-projector-dot>●</span>
+        </button>
+        <span aria-hidden="true">{t("markers.sound")} ○</span>
       </div>
     </>
   );

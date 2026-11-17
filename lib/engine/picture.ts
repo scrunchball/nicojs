@@ -41,6 +41,8 @@ uniform vec2 uRectPx;     // rect size in px, for aspect-correct rotation
 uniform float uProgress;
 uniform float uDevelop;
 uniform float uDye;
+uniform float uZoom;      // push-in: stills scale 1.00 -> 1.04 over the hold
+uniform float uFade;      // fade to black at the end of a scene
 uniform vec3 uPaper;      // blank paper seen by safelight
 uniform vec3 uCast;       // warm cast left on the picture while the lights come up
 varying vec2 vUv;
@@ -56,10 +58,10 @@ void main() {
   float s = sin(uRot), co = cos(uRot);
   ap = vec2(co * ap.x - s * ap.y, s * ap.x + co * ap.y);
   c = ap / uRectPx;
-  c *= (1.0 - uOverscan) * uUvScale;
+  c *= (1.0 - uOverscan) * uUvScale / uZoom;
   vec3 pic = texture2D(uTex, c + 0.5).rgb;
 
-  if (uDevelop < 0.5 || uProgress >= 0.9999) { gl_FragColor = vec4(pic, 1.0); return; }
+  if (uDevelop < 0.5 || uProgress >= 0.9999) { gl_FragColor = vec4(pic * uFade, 1.0); return; }
 
   float p = clamp(uProgress, 0.0, 1.0);
   float L = luma(pic);
@@ -82,7 +84,7 @@ void main() {
   vec3 img = mix(underSafelight, pic * mix(uCast, vec3(1.0), lc), lc);
   // +-0.5/255 dither while developing, so dim safelit gradients don't band (gone at p = 1)
   img += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;
-  gl_FragColor = vec4(img, 1.0);
+  gl_FragColor = vec4(img * uFade, 1.0);
 }
 `;
 
@@ -98,6 +100,9 @@ export type Slot = {
   progress: number;
   develop: boolean;
   dye: number;
+  /** Push-in zoom (default 1) and fade to black (default 1 = no fade). */
+  zoom?: number;
+  fade?: number;
 };
 
 export class PictureEngine {
@@ -134,6 +139,8 @@ export class PictureEngine {
         uProgress: { value: 1 },
         uDevelop: { value: 1 },
         uDye: { value: 0.03 },
+        uZoom: { value: 1 },
+        uFade: { value: 1 },
         uPaper: { value: new THREE.Vector3(0.3, 0.075, 0.05) }, // safelit paper: dim red, luminance ~0.12
         uCast: { value: new THREE.Vector3(1.0, 0.55, 0.45) }, // residual warm cast as the lights come up
       },
@@ -201,6 +208,8 @@ export class PictureEngine {
         u.uProgress.value = s.progress;
         u.uDevelop.value = s.develop ? 1 : 0;
         u.uDye.value = s.dye;
+        u.uZoom.value = s.zoom ?? 1;
+        u.uFade.value = s.fade ?? 1;
         this.renderer.render(this.scene, this.camera);
       }
     });

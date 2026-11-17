@@ -9,34 +9,51 @@ function WithItalicEnd({ text }: { text: string }) {
   return (<>{m[1]}<em>{m[2]}</em>{m[3]}</>);
 }
 
+type Hold = "short" | "normal" | "long" | "t-short" | "t-normal" | "t-long";
+
+/**
+ * One beat of the film. Without JavaScript it is a plain screen-height frame (fallback level 5).
+ * With the Projector running (html.film), the slot becomes a spacer as tall as the beat's scroll length
+ * and the inner .frame is pinned to the screen, shown only while its beat plays.
+ */
+function Frame({ beat, hold, className = "", children, style }: {
+  beat: "picture" | "text"; hold: Hold; className?: string; children: React.ReactNode; style?: React.CSSProperties;
+}) {
+  return (
+    <div className="frame-slot" data-beat={beat} data-hold={hold}>
+      <div className={`frame ${className}`} style={style}>{children}</div>
+    </div>
+  );
+}
+
 export function Screening() {
   const t = useTranslations();
   return (
     <main id="content">
       {/* 1. Opening */}
       <section id="top" className="scene" aria-labelledby="h1">
-        <div className="frame frame--bleed">
+        <Frame beat="picture" hold="long" className="frame--bleed">
           <Picture shot={portraits.opening} priority />
           <div className="frame frame--center" style={{ position: "relative", background: "transparent" }}>
             <h1 id="h1" className="name" data-weave="title">{site.name}</h1>
           </div>
-        </div>
-        <div className="frame frame--center frame--rest">
+        </Frame>
+        <Frame beat="text" hold="t-long" className="frame--center frame--rest">
           <p className="intertitle" data-weave="title" style={{ maxWidth: "20ch" }}>{site.tagline}</p>
-        </div>
+        </Frame>
         {openingShots.map((s) => (
-          <div className="frame" key={s.id}><Window shot={s} /></div>
+          <Frame beat="picture" hold="normal" key={s.id}><Window shot={s} /></Frame>
         ))}
       </section>
 
       {/* 2. Intertitle */}
       <section className="scene" aria-label="Statement">
         {site.statement.map((line, i) => (
-          <div className="frame frame--rest frame--center" key={line}>
+          <Frame beat="text" hold={i === site.statement.length - 1 ? "t-long" : "t-normal"} className="frame--rest frame--center" key={line}>
             <p className="intertitle" data-weave="title" style={{ maxWidth: "16ch" }}>
               {i === site.statement.length - 1 ? <WithItalicEnd text={line} /> : line}
             </p>
-          </div>
+          </Frame>
         ))}
       </section>
 
@@ -44,50 +61,50 @@ export function Screening() {
       <div id="films">
         {films.map((film, i) => (
           <section className="scene" key={film.slug} aria-labelledby={`film-${film.slug}`}>
-            <div className="frame frame--center">
+            <Frame beat="text" hold="t-long" className="frame--center">
               <div className="marker-row" data-weave="title">
                 <p className="label silver">{t("markers.reel")} {i + 1}</p>
                 <h2 id={`film-${film.slug}`} className="title">{film.title}</h2>
               </div>
-            </div>
-            <div className="frame frame--center frame--rest">
+            </Frame>
+            <Frame beat="text" hold="t-short" className="frame--center frame--rest">
               <p className="label">{film.year} · {film.formats.join(" + ").toUpperCase()}</p>
-            </div>
-            <div className="frame frame--bleed">
+            </Frame>
+            <Frame beat="picture" hold="long" className="frame--bleed">
               <Picture shot={film.keyShot} />
               <div className="caption" data-weave="subtitle"><p className="subtitle">{film.synopsis[0]}</p></div>
-            </div>
+            </Frame>
             {film.shots.map((s) => (
-              <div className="frame" key={s.id}><Window shot={s} /></div>
+              <Frame beat="picture" hold={s.kind === "clip" ? "long" : "normal"} key={s.id}><Window shot={s} /></Frame>
             ))}
-            <div className="frame frame--text frame--center">
+            <Frame beat="text" hold="t-long" className="frame--text frame--center">
               <p className="subtitle block" data-weave="subtitle" style={{ maxWidth: "44ch" }}>{film.synopsis[1]}</p>
-            </div>
-            <div className="frame"><Window shot={film.lastShot} /></div>
-            <div className="frame frame--center frame--rest">
+            </Frame>
+            <Frame beat="picture" hold="normal"><Window shot={film.lastShot} /></Frame>
+            <Frame beat="text" hold="t-long" className="frame--center frame--rest">
               <div className="stack" style={{ justifyItems: "center" }}>
                 <a className="label link" href={film.link.href} rel="noopener" target="_blank">
                   {t("labels.viewFilm")} ↗
                 </a>
                 <p className="label silver">{t("labels.berlinCommercial")}</p>
               </div>
-            </div>
+            </Frame>
           </section>
         ))}
       </div>
 
       {/* 5. Festival circuit */}
       <section className="scene" aria-labelledby="circuit">
-        <div className="frame frame--rest frame--center">
+        <Frame beat="text" hold="t-long" className="frame--rest frame--center">
           <h2 id="circuit" className="intertitle" data-weave="title">Festival <em>circuit</em></h2>
-        </div>
+        </Frame>
         {films.map((film) => (
           <div key={film.slug}>
-            <div className="frame frame--rest frame--center">
+            <Frame beat="text" hold="t-normal" className="frame--rest frame--center">
               <p className="title" data-weave="title" style={{ fontSize: "var(--t-intertitle)" }}>{film.title}</p>
-            </div>
+            </Frame>
             {film.recognition.map((r) => (
-              <div className="frame frame--rest frame--text" key={`${film.slug}-${r.kind}-${r.festival}`}>
+              <Frame beat="text" hold="t-short" className="frame--rest frame--text" key={`${film.slug}-${r.kind}-${r.festival}`}>
                 <div className="recognition" data-weave="subtitle">
                   <p className="label silver">{r.kind.toUpperCase()}</p>
                   <p className="festival">{r.festival}</p>
@@ -95,37 +112,37 @@ export function Screening() {
                     <p className="body silver">{[r.year, r.note].filter(Boolean).join(" · ")}</p>
                   )}
                 </div>
-              </div>
+              </Frame>
             ))}
           </div>
         ))}
       </section>
 
       {/* 6. Behind the camera */}
-      <section id="about" className="scene" aria-label="About">
-        <div className="frame"><Window shot={portraits.behind} /></div>
+      <section id="about" className="scene" aria-label="About" data-rest="40">
+        <Frame beat="picture" hold="normal"><Window shot={portraits.behind} /></Frame>
         {site.bio.map((line) => (
-          <div className="frame frame--rest frame--text" key={line}>
+          <Frame beat="text" hold="t-normal" className="frame--rest frame--text" key={line}>
             <p className="subtitle block" data-weave="subtitle" style={{ marginLeft: "auto", maxWidth: "36ch" }}>{line}</p>
-          </div>
+          </Frame>
         ))}
-        <div className="frame"><Window shot={portraits.second} /></div>
+        <Frame beat="picture" hold="normal"><Window shot={portraits.second} /></Frame>
       </section>
 
       {/* 7. End title */}
-      <section id="contact" className="scene" aria-label="Contact">
-        <div className="frame frame--red frame--center">
+      <section id="contact" className="scene" aria-label="Contact" data-rest="0">
+        <Frame beat="text" hold="t-long" className="frame--red frame--center">
           <p className="title" data-weave="title">{site.endTitle.join(" ")}</p>
-        </div>
-        <div className="frame frame--red frame--rest frame--center">
+        </Frame>
+        <Frame beat="text" hold="t-long" className="frame--red frame--rest frame--center">
           <div className="stack" style={{ justifyItems: "center" }}>
             <p className="label">{site.getInTouch.toUpperCase()}</p>
             <a className="intertitle link" href={`mailto:${site.email}`}>{site.email}</a>
           </div>
-        </div>
-        <div className="frame frame--rest frame--center">
+        </Frame>
+        <Frame beat="text" hold="t-long" className="frame--rest frame--center">
           <p className="label silver">{t("markers.end")}</p>
-        </div>
+        </Frame>
       </section>
     </main>
   );
