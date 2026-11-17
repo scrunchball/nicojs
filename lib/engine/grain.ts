@@ -1,18 +1,17 @@
 /**
  * Grain canvas: one fine, living grain over everything (pictures, black and text).
- * Plates are physically based (Boolean model) and generated at build time by scripts/make-grain.mjs.
- * Every film frame picks a new plate and a random offset, so the grain never visibly repeats.
+ * Plates are physically based (Boolean model), generated in a worker in the browser (lib/engine/grainPlates.ts):
+ * no download. Every film frame picks a new plate and a random offset, so the grain never visibly repeats.
  * The canvas is composited with mix-blend-mode: soft-light (CSS). Mid-grey = no change; grain shows most in
- * midtones and a little on black (Adam asked for slightly more on dark backgrounds, D-44).
+ * midtones and a little on black (D-44).
  */
-import type * as T from "three";
 import { GpuTimer } from "./gpuTimer";
 import { hash01 } from "./film";
-
-type Three = typeof import("three");
+import { Pass, createContext, fitCanvas } from "./gl";
+import { PLATE, VARIANTS, generatePlates } from "./grainPlates";
 
 export type GrainState = {
-  /** Default 0.06 (brief). */
+  /** Default 0.06. */
   strength: number;
   /** CSS px per plate texel; 1 = clumps of ~1-2 CSS px. */
   scale: number;
@@ -20,15 +19,7 @@ export type GrainState = {
   still: boolean;
 };
 
-const PLATE = 512;
-const VARIANTS = 12;
-
-const VERT = /* glsl */ `
-out vec2 vUv;
-void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
-`;
-
-const FRAG = /* glsl */ `
+const FRAG = `#version 300 es
 precision highp float;
 precision highp sampler2DArray;
 uniform sampler2DArray uPlates;
@@ -48,80 +39,94 @@ void main() {
 }
 `;
 
+/**
+ * Generate plates off the main thread: the self-contained generator is shipped to a worker as source text
+ * (no bundler support needed). Falls back to the main thread (~0.5 s) if workers are unavailable.
+ */
+function generate(density: number): Promise<Uint8Array> {
+  let url = "";
+  try {
+    const src = `const gen = ${generatePlates.toString()};
+self.onmessage = (e) => { const d = gen(e.data.density); self.postMessage({ data: d }, [d.buffer]); };`;
+    url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+    const w = new Worker(url);
+    return new Promise<Uint8Array>((resolve, reject) => {
+      w.onmessage = (e: MessageEvent<{ data: Uint8Array }>) => { resolve(e.data.data); w.terminate(); URL.revokeObjectURL(url); };
+      w.onerror = (e) => { w.terminate(); URL.revokeObjectURL(url); reject(e); };
+      w.postMessage({ density });
+    }).catch(() => generatePlates(density));
+  } catch {
+    if (url) URL.revokeObjectURL(url);
+    return Promise.resolve(generatePlates(density));
+  }
+}
+
 export class GrainEngine {
-  readonly renderer: T.WebGLRenderer;
-  private scene: T.Scene;
-  private camera: T.Camera;
-  private mat: T.ShaderMaterial;
-  private tex: T.DataArrayTexture | null = null;
+  readonly gl: WebGL2RenderingContext;
+  private pass: Pass;
+  private tex: WebGLTexture | null = null;
   private density = -1;
+  private dpr = 1;
   readonly timer: GpuTimer;
   cpuMs = 0;
 
-  constructor(private THREE: Three, private canvas: HTMLCanvasElement, maxDpr = 2) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, alpha: false, antialias: false, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.Camera();
-    this.mat = new THREE.ShaderMaterial({
-      glslVersion: THREE.GLSL3,
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-      depthTest: false,
-      depthWrite: false,
-      uniforms: {
-        uPlates: { value: null },
-        uLayer: { value: 0 },
-        uOffset: { value: new THREE.Vector2() },
-        uPx: { value: 1 },
-        uScale: { value: 1 },
-        uStrength: { value: 0.06 },
-      },
-    });
-    this.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.mat));
-    this.timer = new GpuTimer(this.renderer.getContext() as WebGL2RenderingContext);
+  constructor(private canvas: HTMLCanvasElement, maxDpr = 2) {
+    this.gl = createContext(canvas, false);
+    this.pass = new Pass(this.gl, FRAG);
+    this.timer = new GpuTimer(this.gl);
+    this.setMaxDpr(maxDpr);
+  }
+
+  setMaxDpr(maxDpr: number) {
+    this.dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
     this.resize();
   }
 
-  resize() {
-    this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight, false);
-  }
+  resize() { fitCanvas(this.gl, this.dpr); }
 
-  /** Load one of the 4 densities (0..3). Only the active density is downloaded (~3 MB). */
+  /** Make one of the 4 densities (0..3). */
   async load(density: number) {
     if (density === this.density) return;
-    const res = await fetch(`/grain/density-${density}.bin`);
-    if (!res.ok) throw new Error(`grain plates missing (${res.status}); run npm run grain`);
-    const data = new Uint8Array(await res.arrayBuffer());
-    const { THREE } = this;
-    const tex = new THREE.DataArrayTexture(data, PLATE, PLATE, VARIANTS);
-    tex.format = THREE.RedFormat;
-    tex.type = THREE.UnsignedByteType;
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.minFilter = tex.magFilter = THREE.LinearFilter;
-    tex.generateMipmaps = false;
-    tex.unpackAlignment = 1;
-    tex.colorSpace = THREE.NoColorSpace;
-    tex.needsUpdate = true;
-    this.tex?.dispose();
+    const data = await generate(density);
+    const gl = this.gl;
+    const tex = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.R8, PLATE, PLATE, VARIANTS, 0, gl.RED, gl.UNSIGNED_BYTE, data);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    if (this.tex) gl.deleteTexture(this.tex);
     this.tex = tex;
     this.density = density;
-    this.mat.uniforms.uPlates.value = tex;
   }
 
   render(frame: number, s: GrainState) {
     if (!this.tex) return;
     const t0 = performance.now();
-    const u = this.mat.uniforms;
+    const gl = this.gl;
     const f = s.still ? 0 : frame;
-    u.uLayer.value = Math.floor(hash01(f, 501) * VARIANTS);
-    u.uOffset.value.set(hash01(f, 502), hash01(f, 503));
-    u.uPx.value = this.renderer.getPixelRatio();
-    u.uScale.value = s.scale;
-    u.uStrength.value = s.strength;
-    this.timer.measure(() => this.renderer.render(this.scene, this.camera));
+    this.timer.measure(() => {
+      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      gl.disable(gl.BLEND);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.tex);
+      this.pass.use()
+        .i("uPlates", 0)
+        .f("uLayer", Math.floor(hash01(f, 501) * VARIANTS))
+        .f("uOffset", hash01(f, 502), hash01(f, 503))
+        .f("uPx", this.dpr)
+        .f("uScale", s.scale)
+        .f("uStrength", s.strength)
+        .draw();
+    });
     this.cpuMs = this.cpuMs * 0.9 + (performance.now() - t0) * 0.1;
   }
 
-  dispose() { this.tex?.dispose(); this.mat.dispose(); this.renderer.dispose(); }
+  dispose() {
+    if (this.tex) this.gl.deleteTexture(this.tex);
+    this.pass.dispose();
+  }
 }

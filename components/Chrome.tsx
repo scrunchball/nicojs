@@ -30,6 +30,27 @@ export function Chrome({ locale }: { locale: string }) {
           </ul>
         </details>
       </nav>
+      {/* phones: INDEX opens a full-screen index, alone on black */}
+      <details className="chrome index label">
+        <summary>
+          <span className="index-open">{t("markers.index")}</span>
+          <span className="index-close">{t("close")} <span aria-hidden="true">×</span></span>
+        </summary>
+        <div className="index-panel">
+          <ul className="index-links">
+            <li><a href="#films">{t("nav.films")}</a></li>
+            <li><a href="#about">{t("nav.about")}</a></li>
+            <li><a href="#contact">{t("nav.contact")}</a></li>
+          </ul>
+          <ul className="index-langs" aria-label={t("language")}>
+            {routing.locales.map((l) => (
+              <li key={l}>
+                <a href={`/${l}/`} hrefLang={l} lang={l} aria-current={l === locale ? "true" : undefined}>{l.toUpperCase()}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </details>
       <div className="chrome chrome-timecode label" aria-hidden="true">
         <span data-timecode>00:00:00:00</span>
       </div>

@@ -37,6 +37,12 @@ Laurels: SVG or transparent PNG. If one is a PNG, send it to Claude (the path ch
 (free up to 10 GB, serves MP4 with seeking); the player then points at the R2 URL. Send the masters to Claude
 for a 1080p web encode (H.264, ~6 Mbps, AAC audio).
 
+## After adding or replacing frames
+```bash
+python3 scripts/encode-media.py
+```
+Writes the WebP sizes (960/1600/2560) and the tiny blurred previews. Claude runs this when encoding.
+
 ## Specs (from the brief)
 - **Frames:** clean frame grabs from the graded master. No titles, subtitles, credits or posters.
   2560px wide (1920 minimum), original aspect ratio, sRGB, JPG quality ~85.

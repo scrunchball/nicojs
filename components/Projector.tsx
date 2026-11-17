@@ -16,9 +16,9 @@
  * - No WebGL2 or an engine error: nothing changes, the plain DOM page stays (fallback levels 3 and 5).
  */
 import { useEffect, useRef } from "react";
-import type * as T from "three";
 import { FPS, WEAVE, frameAt, weave } from "@/lib/engine/film";
 import type { PictureEngine } from "@/lib/engine/picture";
+import type { Tex } from "@/lib/engine/gl";
 import type { GrainEngine } from "@/lib/engine/grain";
 import { PX_PER_FRAME, compile, evaluate, timecode, type Beat } from "@/lib/engine/timeline";
 import { MOTIFS } from "@/lib/engine/motifs";
@@ -48,7 +48,7 @@ type ShotState = {
   beat: Beat;
   timer: boolean;
   loading: boolean;
-  tex: T.Texture | null;
+  tex: Tex | null;
   aspect: number;
   duration: number;
   drawn: boolean;
@@ -67,8 +67,18 @@ export function Projector() {
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const phone = window.matchMedia("(max-width: 809px)").matches;
-    const maxDpr = phone ? 1.5 : 2;
-    const grainFps = phone ? 12 : FPS;
+    // Light mode: data saver / reduced data. Background loops stay as posters, grain is renewed at 12 fps.
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    const lite = !!conn?.saveData || window.matchMedia("(prefers-reduced-data: reduce)").matches;
+    let maxDpr = phone ? 1.5 : 2;
+    let grainFps = phone || lite ? 12 : FPS;
+    let motifsOn = true;
+    // Adaptive quality: if frames run slow while the film is moving, step down (never back up in a visit).
+    // level 1: pixel ratio 1.25; level 2: pixel ratio 1, grain at 12 fps, no background motifs.
+    let quality = 0;
+    let slowSince = -1;
+    let lastNow = -1;
+    const force = new URLSearchParams(location.search).get("engine") === "force"; // tests on software GPUs
     const pageStart = performance.now();
 
     let motion = !reduced;
@@ -76,7 +86,6 @@ export function Projector() {
 
     let pic: PictureEngine | null = null;
     let grain: GrainEngine | null = null;
-    let THREE: typeof import("three") | null = null;
     let lenis: import("lenis").default | null = null;
     let raf = 0;
     let disposed = false;
@@ -125,7 +134,7 @@ export function Projector() {
       s.loading = true;
       try {
         if (s.el instanceof HTMLVideoElement) {
-          if (reduced) { s.loading = false; return; } // no scrubbing: the poster stays in the DOM
+          if (reduced || (lite && s.el.dataset.loop !== undefined)) { s.loading = false; return; } // the poster stays in the DOM
           const v = s.el;
           const scrub = v.dataset.scrub ?? (v.dataset.loop !== undefined ? v.getAttribute("src") ?? undefined : undefined);
           if (scrub && !v.src.startsWith("blob:")) {
@@ -234,8 +243,26 @@ export function Projector() {
       return Math.min(1, Math.max(0, (now - s.developStart) / CONFIG.openingDevelopMs));
     };
 
+    const stepDown = () => {
+      quality++;
+      if (quality === 1) maxDpr = Math.min(maxDpr, 1.25);
+      if (quality >= 2) { maxDpr = 1; grainFps = 12; motifsOn = false; }
+      pic?.setMaxDpr(maxDpr);
+      grain?.setMaxDpr(maxDpr);
+      dirty = true;
+      console.info(`[projector] quality step ${quality}`);
+    };
+
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop);
+      // frame pacing: ~40 fps or worse for 2 s while the film is moving => step quality down
+      if (lastNow > 0 && quality < 2 && !force && document.visibilityState === "visible") {
+        const dt = now - lastNow;
+        const busy = window.scrollY !== lastY || (motion && !watching);
+        if (busy && dt > 25 && dt < 250) { if (slowSince < 0) slowSince = now; else if (now - slowSince > 2000) { stepDown(); slowSince = -1; } }
+        else if (dt <= 20) slowSince = -1;
+      }
+      lastNow = now;
       if (!pic || !grain || lost || watching) return;
       lenis?.raf(now);
       // parallax eases toward the pointer; the playing screen's text leans via CSS, pictures on the canvas
@@ -358,7 +385,7 @@ export function Projector() {
             const v = sh.el;
             if (v instanceof HTMLVideoElement) {
               if (v.dataset.loop !== undefined) {
-                if (v.paused && motion) v.play().catch(() => {}); // a quiet loop behind the watch button
+                if (v.paused && motion && !lite) v.play().catch(() => {}); // a quiet loop behind the watch button
                 if (!motion && !v.paused) v.pause();
               } else if (sh.duration) {
                 const t = Math.min(sh.duration - 1 / FPS, st.q * sh.duration); // scrub; holds the last frame
@@ -370,7 +397,7 @@ export function Projector() {
         }
         // the scene's background motif: fades in over the scene's first 30vh, out with the scene through its rest
         let bg: Parameters<PictureEngine["frame"]>[1] = null;
-        const motif = st ? MOTIFS[st.beat.scene] : undefined;
+        const motif = st && motifsOn ? MOTIFS[st.beat.scene] : undefined;
         if (st && (motif || reelBox)) {
           const env = Math.min(1, Math.max(0, (y - st.beat.sceneStart) / (vh * 0.3))) * st.fade;
           const m = motif ?? { mode: 0, color: [0, 0, 0] as [number, number, number], intensity: 0 };
@@ -447,6 +474,7 @@ export function Projector() {
       const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[href^='#']");
       if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey) return;
       const hash = a.getAttribute("href")!;
+      a.closest<HTMLDetailsElement>("details.index")?.removeAttribute("open"); // phones: close INDEX
       const y = landing(hash);
       if (y === null) return;
       e.preventDefault();
@@ -494,12 +522,17 @@ export function Projector() {
 
     const init = async () => {
       try {
-        THREE = THREE ?? (await import("three"));
         const { PictureEngine } = await import("@/lib/engine/picture");
         const { GrainEngine } = await import("@/lib/engine/grain");
         if (disposed || !picRef.current || !grainRef.current) return;
-        pic = new PictureEngine(THREE, picRef.current, maxDpr);
-        grain = new GrainEngine(THREE, grainRef.current, maxDpr);
+        pic = new PictureEngine(picRef.current, maxDpr);
+        // A software-rendered GPU can't run the film smoothly: keep the plain page (fallback level 3).
+        const dbg = pic.gl.getExtension("WEBGL_debug_renderer_info");
+        const rendererName = dbg ? String(pic.gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : "";
+        if (/swiftshader|llvmpipe|software|basic render/i.test(rendererName) && !force) {
+          throw new Error(`software renderer (${rendererName})`);
+        }
+        grain = new GrainEngine(grainRef.current, maxDpr);
         await grain.load(CONFIG.grain.density);
         if (disposed) return;
         if (!reduced && !lenis) {

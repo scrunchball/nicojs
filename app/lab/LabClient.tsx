@@ -145,12 +145,11 @@ export function LabClient() {
 
     (async () => {
       try {
-        const THREE = await import("three");
         const { PictureEngine } = await import("@/lib/engine/picture");
         const { GrainEngine } = await import("@/lib/engine/grain");
         if (disposed || !picRef.current || !grainRef.current) return;
-        const pic = new PictureEngine(THREE, picRef.current);
-        const grain = new GrainEngine(THREE, grainRef.current);
+        const pic = new PictureEngine(picRef.current);
+        const grain = new GrainEngine(grainRef.current);
         engines.current = { pic, grain };
         pic.setSource(standIn((params.current.test || 1) as TestId));
         await grain.load(params.current.density);

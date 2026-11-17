@@ -79,14 +79,22 @@ Not yet / caveats:
 
 - The email is the last screen (D-56). No film pages (D-57).
 
-## Measured before the performance stage (static build, Stage 6)
-- JS before interaction: ~155 KB gzip for modern browsers (194 KB incl. the 39 KB legacy polyfill only old browsers fetch). Budget 180 KB.
-- Lazy after first paint: three.js chunk 185 KB gzip; lenis + engine ~12 KB.
-- Grain: 3 MB per density, fetched on load. Biggest single cost, worst on phones.
-- HTML 8.6 KB gzip. Placeholder media 2.6 MB (real frames will be larger; no srcset/AVIF yet).
+## Stage 7: Performance and phones (branch `stage-07-performance-phones`): built, awaiting Adam's review
+Done (D-58..D-64):
+- three.js replaced by a small WebGL2 core: lazy engine ~197 KB -> ~15 KB gzip; pixel parity with the old engine over all 23 beats.
+- Grain generated in the browser (worker): -3 MB per visit.
+- JS before interaction ~144 KB gzip (budget 180). Responsive WebP + inline blurred previews for every picture.
+- Adaptive quality, data-saver light mode, software-GPU fallback to the plain page.
+- Phones: INDEX menu, type minimums, tap targets, landscape layer; checked on iPhone 13, a 360px Android, iPhone landscape and iPad: no sideways scroll, nothing important off screen, INDEX and the player work. Fixed spacers swallowing taps.
+- Measured (local, uncompressed server): mobile with 4x CPU slowdown + slow 4G: FCP/LCP 1.0 s (LCP is the name, real text), CLS 0.001, TBT 157 ms. Desktop: LCP 0.2 s, CLS 0.04, TBT 57 ms.
+
+Not yet / caveats:
+- Lighthouse itself was not run (the tool needs Adam's permission in this session); the core numbers above were measured directly in Chromium.
+- Real GPU timings still need a real Mac and phone (open the site with the PROYECTOR on and scroll the whole film).
+- Real frames must go through `python3 scripts/encode-media.py` (Claude does this when they arrive).
 
 ## Not started
-Stage 7 (now: 404 + Impressum/privacy only), 10 responsive and fallbacks, 11 performance/accessibility/SEO, 12 launch. Backend (CMS) to be decided., 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
+404 + Impressum/privacy; accessibility + SEO pass (screen reader, metadata, sitemap, social images); launch (domain, R2 for the films, headers, monitoring). Backend (CMS) to be decided., 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 
 ## Waiting on Adam / Nico
 - Cloudflare account and Pages connection.

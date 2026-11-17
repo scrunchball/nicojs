@@ -5,6 +5,7 @@
  * German and Spanish fall back to English until proofread translations exist.
  */
 import media from "./media.json";
+import variants from "./media-variants.json";
 
 export type Composition = "full-bleed" | "large-window" | "small-window";
 
@@ -19,6 +20,9 @@ export type Shot = {
   scrub?: string;
   width: number;
   height: number;
+  /** Responsive WebP variants and a tiny inline preview (scripts/encode-media.py). */
+  srcSet?: string;
+  lqip?: string;
   alt: string;
   composition: Composition;
   side?: "left" | "right";
@@ -63,8 +67,10 @@ function shot(folder: string, id: string, alt: string, composition: Composition,
   if (!m) throw new Error(`content/media.json has no ${folder}/${id}`);
   const [width, height] = m.size ?? f.size;
   const base = `/media/${folder}/${id}`;
+  const v = (variants as Record<string, { w: number[]; lqip: string }>)[`${folder}/${id}`];
   return {
     id, kind: m.kind, src: `${base}.jpg`, width, height, alt, composition, side,
+    ...(v ? { srcSet: v.w.map((w) => `${base}-${w}.webp ${w}w`).join(", "), lqip: v.lqip } : {}),
     ...(m.kind === "clip" ? { loop: `${base}.mp4`, scrub: `${base}-scrub.mp4` } : {}),
     ...(m.kind === "loop" || m.kind === "film" ? { loop: `${base}.mp4` } : {}),
   };

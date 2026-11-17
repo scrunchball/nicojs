@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { NextIntlClientProvider } from "next-intl";
-import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import "@fontsource/instrument-serif/latin-400.css";
@@ -36,13 +35,12 @@ export default async function LocaleLayout({
   const { locale } = await params;
   if (!routing.locales.includes(locale as never)) notFound();
   setRequestLocale(locale);
-  const messages = await getMessages();
   return (
     <html lang={locale} suppressHydrationWarning>
       <body>
         {/* Before first paint: if the film engine can run, hold the opening portrait in black (it develops in). */}
         <script dangerouslySetInnerHTML={{ __html: PENDING }} />
-        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        {children}
       </body>
     </html>
   );

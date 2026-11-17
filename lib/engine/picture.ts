@@ -3,11 +3,9 @@
  * Pictures are shown exactly as graded: sRGB values pass straight through (no colour management,
  * tone curve or saturation change), so at progress = 1 the output equals the source pixel.
  */
-import type * as T from "three";
 import { GpuTimer } from "./gpuTimer";
 import type { WeaveOffset } from "./film";
-
-type Three = typeof import("three");
+import { FRAG_PREFIX, Pass, Tex, createContext, fitCanvas } from "./gl";
 
 export type Composition = "full-bleed" | "large-window" | "small-window";
 
@@ -54,15 +52,10 @@ float revealMask(vec2 px) { return uReveal >= 1.0 ? 1.0 : 1.0 - smoothstep(-1.0,
 float shutterLine(vec2 px) { return uReveal >= 1.0 || uReveal <= 0.0 ? 0.0 : exp(-abs(px.y - shutterEdge(px)) / 1.6) * 0.16; }
 `;
 
-const VERT = /* glsl */ `
-varying vec2 vUv;
-void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
-`;
 
 // Development (brief: Film engine > 1. Development). Phases over progress p:
 //  0-10% paper under safelight, 10-45% shadows emerge, 15-60% agitation, 45-75% full density, 75-100% lights on.
-const FRAG = /* glsl */ `
-precision highp float;
+const FRAG = FRAG_PREFIX + /* glsl */ `
 ${COMMON_GLSL}
 uniform sampler2D uTex;
 uniform float uWipe;      // shutter wipe inside the picture: -1 off, else the edge 0..1 from the top
@@ -137,8 +130,7 @@ void main() {
 
 export type Rect = { x: number; y: number; w: number; h: number };
 
-const BG_FRAG = /* glsl */ `
-precision highp float;
+const BG_FRAG = FRAG_PREFIX + /* glsl */ `
 ${COMMON_GLSL}
 uniform vec3 uColor;
 uniform float uIntensity;
@@ -187,31 +179,14 @@ export type Background = {
   box?: Box | null; inside?: [number, number, number]; reveal?: number; fade?: number;
 };
 
-type Uniforms = Record<string, { value: unknown }>;
-function boxUniforms(THREE: Three): Uniforms {
-  return {
-    uBoxOn: { value: 0 },
-    uBox: { value: new THREE.Vector4(0, 0, 1, 1) },
-    uBoxR: { value: 28 },
-    uBoxJag: { value: 2.5 },
-    uBoxT: { value: 0 },
-    uView: { value: new THREE.Vector2(1, 1) },
-    uReveal: { value: 1 },
-  };
-}
-function setBox(u: Uniforms, box: Box | null | undefined, reveal: number | undefined, vw: number, vh: number) {
-  (u.uView.value as T.Vector2).set(vw, vh);
-  u.uBoxOn.value = box ? 1 : 0;
-  if (box) {
-    (u.uBox.value as T.Vector4).set(box.x, box.y, box.w, box.h);
-    u.uBoxR.value = box.r; u.uBoxJag.value = box.jag; u.uBoxT.value = box.t;
-  }
-  u.uReveal.value = reveal ?? 1;
+function setBox(pass: Pass, box: Box | null | undefined, reveal: number | undefined, vw: number, vh: number) {
+  pass.f("uView", vw, vh).f("uBoxOn", box ? 1 : 0).f("uReveal", reveal ?? 1);
+  if (box) pass.f("uBox", box.x, box.y, box.w, box.h).f("uBoxR", box.r).f("uBoxJag", box.jag).f("uBoxT", box.t);
 }
 
 /** One picture to draw this frame, at a rect in CSS px relative to the canvas (the viewport). */
 export type Slot = {
-  tex: T.Texture;
+  tex: Tex;
   aspect: number;
   rect: Rect;
   full: boolean;
@@ -229,146 +204,86 @@ export type Slot = {
 };
 
 export class PictureEngine {
-  readonly renderer: T.WebGLRenderer;
-  private scene: T.Scene;
-  private camera: T.Camera;
-  private mat: T.ShaderMaterial;
-  private bgScene: T.Scene;
-  private bgMat: T.ShaderMaterial;
-  private tex: T.Texture | null = null; // lab: the single loaded source
+  readonly gl: WebGL2RenderingContext;
+  private pic: Pass;
+  private bg: Pass;
+  private aniso: EXT_texture_filter_anisotropic | null;
+  private dpr = 1;
+  private tex: Tex | null = null; // lab: the single loaded source
   private aspect = 16 / 9;
   readonly timer: GpuTimer;
   cpuMs = 0;
 
-  constructor(private THREE: Three, private canvas: HTMLCanvasElement, maxDpr = 2) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, premultipliedAlpha: true, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
-    this.renderer.setClearColor(0x000000, 0);
-    this.renderer.autoClear = false;
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.Camera();
-    this.mat = new THREE.ShaderMaterial({
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      uniforms: {
-        uTex: { value: null },
-        uRect: { value: new THREE.Vector4(0, 0, 1, 1) },
-        uUvScale: { value: new THREE.Vector2(1, 1) },
-        uShift: { value: new THREE.Vector2(0, 0) },
-        uOverscan: { value: 0.01 },
-        uRot: { value: 0 },
-        uRectPx: { value: new THREE.Vector2(1, 1) },
-        uProgress: { value: 1 },
-        uDevelop: { value: 1 },
-        uDye: { value: 0.03 },
-        uZoom: { value: 1 },
-        uFade: { value: 1 },
-        uWipe: { value: -1 },
-        ...boxUniforms(THREE),
-        uPaper: { value: new THREE.Vector3(0.3, 0.075, 0.05) }, // safelit paper: dim red, luminance ~0.12
-        uCast: { value: new THREE.Vector3(1.0, 0.55, 0.45) }, // residual warm cast as the lights come up
-      },
-    });
-    this.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.mat));
-    this.bgMat = new THREE.ShaderMaterial({
-      vertexShader: VERT,
-      fragmentShader: BG_FRAG,
-      blending: THREE.NoBlending,
-      depthTest: false,
-      depthWrite: false,
-      uniforms: {
-        uColor: { value: new THREE.Vector3(1, 1, 1) },
-        uIntensity: { value: 0 },
-        uTime: { value: 0 },
-        uMode: { value: 2 },
-        uInside: { value: new THREE.Vector3(0.105, 0.098, 0.09) },
-        uBoxFade: { value: 1 },
-        ...boxUniforms(THREE),
-      },
-    });
-    this.bgScene = new THREE.Scene();
-    this.bgScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.bgMat));
-    this.timer = new GpuTimer(this.renderer.getContext() as WebGL2RenderingContext);
+  constructor(private canvas: HTMLCanvasElement, maxDpr = 2) {
+    this.gl = createContext(canvas, true);
+    this.pic = new Pass(this.gl, FRAG);
+    this.bg = new Pass(this.gl, BG_FRAG);
+    this.aniso = this.gl.getExtension("EXT_texture_filter_anisotropic");
+    this.timer = new GpuTimer(this.gl);
+    this.setMaxDpr(maxDpr);
+  }
+
+  /** Adaptive quality lowers the pixel ratio on weaker devices. */
+  setMaxDpr(maxDpr: number) {
+    this.dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
     this.resize();
   }
 
-  resize() {
-    this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight, false);
-  }
+  resize() { fitCanvas(this.gl, this.dpr); }
 
-  /** Make a texture from a decoded image, a canvas or a playing video. Graded sRGB passes straight through. */
-  createTexture(src: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement): T.Texture {
-    const { THREE } = this;
-    const tex =
-      src instanceof HTMLVideoElement ? new THREE.VideoTexture(src)
-      : src instanceof HTMLCanvasElement ? new THREE.CanvasTexture(src)
-      : new THREE.Texture(src);
-    tex.colorSpace = THREE.NoColorSpace;
-    tex.magFilter = THREE.LinearFilter;
-    if (src instanceof HTMLVideoElement) {
-      tex.minFilter = THREE.LinearFilter;
-      tex.generateMipmaps = false;
-    } else {
-      tex.minFilter = THREE.LinearMipmapLinearFilter;
-      tex.generateMipmaps = true;
-      tex.anisotropy = 4;
-    }
-    tex.needsUpdate = true;
-    return tex;
+  /** A texture from a decoded image, a canvas or a playing video. Graded sRGB passes straight through. */
+  createTexture(src: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement): Tex {
+    return new Tex(this.gl, src, !(src instanceof HTMLVideoElement), this.aniso);
   }
 
   /** Upload a texture now (so the first draw never stalls mid-scroll). */
-  upload(tex: T.Texture) { this.renderer.initTexture(tex); }
+  upload(tex: Tex) { tex.bind(0); }
 
-  /** Draw the scene's background motif (optional), then every visible slot. Nothing to draw clears the canvas. */
+  /** Draw the scene's background (motif and/or reel container), then every visible slot. */
   frame(slots: Slot[], bg?: Background | null) {
     const t0 = performance.now();
+    const gl = this.gl;
     const vw = this.canvas.clientWidth, vh = this.canvas.clientHeight;
-    const u = this.mat.uniforms;
     this.timer.measure(() => {
-      this.renderer.clear();
+      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
       if (bg && (bg.intensity > 0.0005 || bg.box)) {
-        const b = this.bgMat.uniforms;
-        b.uColor.value.set(...bg.color);
-        b.uIntensity.value = bg.intensity;
-        b.uTime.value = bg.time;
-        b.uMode.value = bg.mode;
-        if (bg.inside) b.uInside.value.set(...bg.inside);
-        b.uBoxFade.value = bg.fade ?? 1;
-        setBox(b, bg.box, bg.reveal, vw, vh);
-        this.renderer.render(this.bgScene, this.camera);
+        gl.disable(gl.BLEND);
+        const p = this.bg.use();
+        p.f("uColor", ...bg.color).f("uIntensity", bg.intensity).f("uTime", bg.time).f("uMode", bg.mode)
+          .f("uInside", ...(bg.inside ?? [0.105, 0.098, 0.09])).f("uBoxFade", bg.fade ?? 1);
+        setBox(p, bg.box, bg.reveal, vw, vh);
+        p.draw();
       }
+      if (!slots.length) return;
+      gl.enable(gl.BLEND);
+      gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      const p = this.pic.use();
+      p.i("uTex", 0)
+        .f("uPaper", 0.3, 0.075, 0.05) // safelit paper: dim red, luminance ~0.12
+        .f("uCast", 1.0, 0.55, 0.45); // residual warm cast as the lights come up
       for (const s of slots) {
         const r = s.rect;
         const dxPx = s.weave.x * r.h, dyPx = s.weave.y * r.h; // weave is a fraction of picture height
         if (s.full) {
           const ra = r.w / r.h; // cover crop
-          u.uUvScale.value.set(ra > s.aspect ? 1 : ra / s.aspect, ra > s.aspect ? s.aspect / ra : 1);
-          u.uRect.value.set(r.x / vw, 1 - (r.y + r.h) / vh, r.w / vw, r.h / vh);
-          u.uShift.value.set(dxPx / r.w, dyPx / r.h);
-          u.uOverscan.value = 0.02; // room for weave + mouse parallax without showing an edge
-          u.uRot.value = (s.weave.rot * Math.PI) / 180;
+          p.f("uUvScale", ra > s.aspect ? 1 : ra / s.aspect, ra > s.aspect ? s.aspect / ra : 1)
+            .f("uRect", r.x / vw, 1 - (r.y + r.h) / vh, r.w / vw, r.h / vh)
+            .f("uShift", dxPx / r.w, dyPx / r.h)
+            .f("uOverscan", 0.02) // room for weave + mouse parallax without showing an edge
+            .f("uRot", (s.weave.rot * Math.PI) / 180);
         } else {
           // windows: the whole window moves, edges included
-          u.uUvScale.value.set(1, 1);
-          u.uRect.value.set((r.x + dxPx) / vw, 1 - (r.y + r.h - dyPx) / vh, r.w / vw, r.h / vh);
-          u.uShift.value.set(0, 0);
-          u.uOverscan.value = 0;
-          u.uRot.value = 0;
+          p.f("uUvScale", 1, 1)
+            .f("uRect", (r.x + dxPx) / vw, 1 - (r.y + r.h - dyPx) / vh, r.w / vw, r.h / vh)
+            .f("uShift", 0, 0).f("uOverscan", 0).f("uRot", 0);
         }
-        u.uRectPx.value.set(r.w, r.h);
-        u.uTex.value = s.tex;
-        u.uProgress.value = s.progress;
-        u.uDevelop.value = s.develop ? 1 : 0;
-        u.uDye.value = s.dye;
-        u.uZoom.value = s.zoom ?? 1;
-        u.uFade.value = s.fade ?? 1;
-        u.uWipe.value = s.wipe ?? -1;
-        setBox(u, s.box, s.reveal, vw, vh);
-        this.renderer.render(this.scene, this.camera);
+        p.f("uRectPx", r.w, r.h).f("uProgress", s.progress).f("uDevelop", s.develop ? 1 : 0).f("uDye", s.dye)
+          .f("uZoom", s.zoom ?? 1).f("uFade", s.fade ?? 1).f("uWipe", s.wipe ?? -1);
+        setBox(p, s.box, s.reveal, vw, vh);
+        s.tex.bind(0);
+        p.draw();
       }
     });
     this.cpuMs = this.cpuMs * 0.9 + (performance.now() - t0) * 0.1;
@@ -402,5 +317,9 @@ export class PictureEngine {
     }]);
   }
 
-  dispose() { this.tex?.dispose(); this.mat.dispose(); this.bgMat.dispose(); this.renderer.dispose(); }
+  dispose() {
+    this.tex?.dispose();
+    this.pic.dispose();
+    this.bg.dispose();
+  }
 }
