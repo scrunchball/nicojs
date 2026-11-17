@@ -49,7 +49,7 @@ Done:
 
 Not yet / caveats:
 - "No dropped frames on desktop" can't be judged from here (software WebGL). Check on a real Mac: scroll the whole film and watch the timecode.
-- Scrubbing needs HTTP range requests: works on Cloudflare Pages; Python's http.server can't seek (use `npx serve out` locally).
+- Scrub clips are fetched once into memory (blob) so seeking works even where the server ignores range requests (Cloudflare Pages answered 200 with the whole file in testing).
 - Name build, intertitle/festival/end-title builds and the pacing pass are Stage 6.
 
 ## Not started

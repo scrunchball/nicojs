@@ -90,6 +90,11 @@ export function Projector() {
     /* ---------- textures ---------- */
 
     const release = (s: ShotState) => {
+      if (s.el instanceof HTMLVideoElement && s.el.src.startsWith("blob:")) {
+        URL.revokeObjectURL(s.el.src);
+        s.el.removeAttribute("src"); // back to the poster until it's near again
+        s.el.load();
+      }
       s.tex?.dispose();
       s.tex = null;
       s.drawn = false;
@@ -105,7 +110,15 @@ export function Projector() {
           if (reduced) { s.loading = false; return; } // no scrubbing: the poster stays in the DOM
           const v = s.el;
           const scrub = v.dataset.scrub;
-          if (scrub && !v.src.endsWith(scrub)) { v.src = scrub; } // all-intra encode: frame-accurate seeking
+          if (scrub && !v.src.startsWith("blob:")) {
+            // All-intra encode for frame-accurate seeking, held in memory as a blob: seeking then never depends on
+            // the server honouring range requests (Cloudflare Pages may answer 200 with the whole file).
+            const res = await fetch(scrub);
+            if (!res.ok) throw new Error(`scrub clip ${res.status}: ${scrub}`);
+            const url = URL.createObjectURL(await res.blob());
+            if (!s.beat.slot.dataset.near) { URL.revokeObjectURL(url); s.loading = false; return; }
+            v.src = url;
+          }
           v.preload = "auto";
           v.pause();
           if (v.readyState < 2) {
