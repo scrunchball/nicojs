@@ -13,6 +13,8 @@ import "@fontsource/courier-prime/latin-700.css";
 import "@/styles/tokens.css";
 import "@/styles/globals.css";
 
+const PENDING = `(function(){var d=document.documentElement;if(window.WebGL2RenderingContext&&!matchMedia('(prefers-reduced-motion: reduce)').matches){d.classList.add('projector-pending');setTimeout(function(){d.classList.remove('projector-pending')},6000)}})()`;
+
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
@@ -35,8 +37,10 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
       <body>
+        {/* Before first paint: if the film engine can run, hold the opening portrait in black (it develops in). */}
+        <script dangerouslySetInnerHTML={{ __html: PENDING }} />
         <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
       </body>
     </html>

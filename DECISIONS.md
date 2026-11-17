@@ -22,3 +22,9 @@
 | D-18 | Grain plates are generated at build time (`npm run grain`, ~2 s) into `public/grain/` and not committed. 12 variants x 4 densities x 512² = 3 MB per density; only the active density is fetched | Keeps the repo small. Revisit the 3 MB download for phones in Stage 10/11 |
 | D-19 | Raw WebGL output passes graded sRGB straight through (NoColorSpace, no tone mapping). At progress 1 the shader returns the source pixel exactly | "Pictures are shown exactly as Nico graded them" |
 | D-20 | ±0.5/255 dither on the picture only while it develops | Dim safelit gradients banded in 8 bits. Gone at progress 1, so the finished picture is untouched |
+| D-21 | `content/media.json` is the single list of media files; `content/site.ts` builds every shot's paths from it, and `scripts/make-placeholders.py` generates a labelled placeholder for each | Real files replace placeholders by name, with no code change |
+| D-22 | Placeholder and (until the backend) real media are committed under `public/media/` and served by Cloudflare Pages | No R2 yet (D-02). Pages' 25 MiB per-file limit caps scrub clips at ~10 s |
+| D-23 | Composition stays in CSS/DOM; the Projector reads each slot's on-screen rect every display frame and draws it there. The DOM picture fades out only after the canvas has drawn it | One source of layout truth; a slot can never be blank, and no-JS/no-WebGL keep working |
+| D-24 | Textures stream in 1.5 viewports ahead and are freed beyond 4 viewports | Bounds GPU memory on long screenings |
+| D-25 | Phones: picture/grain pixel ratio capped at 1.5, grain renewed at 12 fps | From the brief's breakpoint table, applied early because it's one line |
+| D-26 | Opening: an inline script hides the opening portrait before first paint when WebGL2 exists (6 s safety timeout), so the visitor sees black and grain, then the develop | Otherwise the DOM picture would flash before going black |

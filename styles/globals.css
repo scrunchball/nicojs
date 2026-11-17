@@ -56,7 +56,7 @@ img { display: block; max-width: 100%; }
 
 /* Pictures: clean and borderless; placeholders are flat Picture black until real frames arrive */
 .pic { background: var(--picture-black); width: 100%; height: 100%; object-fit: cover; }
-.pic--ph { background: linear-gradient(135deg, #1b1917, #141210 60%, #1a1816); }
+
 .window { align-self: center; padding-block: 12svh; }
 .window .pic { width: 100%; height: auto; }
 .window--large { width: 62%; }
@@ -96,3 +96,11 @@ img { display: block; max-width: 100%; }
   .chrome-nav ul { gap: var(--s2); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- Projector (Stage 4) ---------- */
+main { position: relative; z-index: 1; }
+.projector-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.projector-picture { z-index: 0; }
+.projector-grain { z-index: 60; mix-blend-mode: overlay; } /* over everything, interface included */
+html.projector-on .pic[data-ready] { opacity: 0; } /* the canvas is drawing this shot */
+html.projector-pending .pic[data-develop="timer"] { opacity: 0; } /* opening: black, then the portrait develops */

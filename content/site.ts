@@ -4,18 +4,23 @@
  * this file later without touching the page components.
  * German and Spanish fall back to English until proofread translations exist.
  */
+import media from "./media.json";
 
 export type Composition = "full-bleed" | "large-window" | "small-window";
 
 export type Shot = {
   id: string;
-  /** Image path under /public, or undefined while we wait for Nico's frames. */
-  src?: string;
+  kind: "image" | "clip";
+  /** Image (or clip poster) under /public. */
+  src: string;
+  /** Clips only: loop encode and all-intra scrub encode. */
+  loop?: string;
+  scrub?: string;
+  width: number;
+  height: number;
   alt: string;
   composition: Composition;
   side?: "left" | "right";
-  /** Aspect ratio used by the placeholder until a real frame is supplied. */
-  aspect?: number;
   subtitle?: string;
 };
 
@@ -34,10 +39,30 @@ export type Film = {
   /** One sentence per beat. */
   synopsis: string[];
   link: { href: string };
+  /** Key image, full-bleed, carries the first synopsis sentence as its subtitle. */
   keyShot: Shot;
+  /** Cut through after the key image (one of them a clip). */
   shots: Shot[];
+  /** The last shot, after the second sentence. */
+  lastShot: Shot;
   recognition: Recognition[];
 };
+
+/* ---------- media: content/media.json is the single list of files (see docs/MEDIA.md) ---------- */
+type MediaShot = { id: string; kind: "image" | "clip"; size?: [number, number] };
+const folders = (media as unknown as { folders: Record<string, { size: [number, number]; shots: MediaShot[] }> }).folders;
+
+function shot(folder: string, id: string, alt: string, composition: Composition, side?: "left" | "right"): Shot {
+  const f = folders[folder];
+  const m = f.shots.find((x) => x.id === id);
+  if (!m) throw new Error(`content/media.json has no ${folder}/${id}`);
+  const [width, height] = m.size ?? f.size;
+  const base = `/media/${folder}/${id}`;
+  return {
+    id, kind: m.kind, src: `${base}.jpg`, width, height, alt, composition, side,
+    ...(m.kind === "clip" ? { loop: `${base}.mp4`, scrub: `${base}-scrub.mp4` } : {}),
+  };
+}
 
 export const site = {
   name: "Nicolás J. Scatamacchia",
@@ -71,15 +96,13 @@ export const films: Film[] = [
       "A filmmaker and an actress spend a summer day filming each other: a love letter to cinema and to being alive.",
     ],
     link: { href: "https://berlincommercial.awardsengine.com/winners/2025/personal-work#193614" },
-    keyShot: {
-      id: "wei-key",
-      alt: "Frame from What Else is There?",
-      composition: "full-bleed",
-      aspect: 1.66,
-    },
+    keyShot: shot("what-else-is-there", "wei-01", "Frame from What Else is There?", "full-bleed"),
     shots: [
-      { id: "wei-1", alt: "Frame from What Else is There?", composition: "large-window", side: "right", aspect: 1.66 },
+      shot("what-else-is-there", "wei-02", "Frame from What Else is There?", "large-window", "right"),
+      shot("what-else-is-there", "wei-03", "Frame from What Else is There?", "small-window", "left"),
+      shot("what-else-is-there", "wei-04", "Clip from What Else is There?", "large-window", "right"),
     ],
+    lastShot: shot("what-else-is-there", "wei-05", "Frame from What Else is There?", "large-window", "left"),
     recognition: [
       { kind: "Opening film", festival: "Berlin Short Film Festival", year: 2026 },
       { kind: "Shortlisted", festival: "Berlin Commercial Awards", year: 2025, note: "Personal Work – Experimental" },
@@ -98,15 +121,13 @@ export const films: Film[] = [
       "A meditative journey through earth, water, air and fire, where layers of identity fall away and what remains is presence, and love.",
     ],
     link: { href: "https://berlincommercial.awardsengine.com/winners/2026#208868" },
-    keyShot: {
-      id: "btf-key",
-      alt: "Frame from By the Fire",
-      composition: "full-bleed",
-      aspect: 1.37,
-    },
+    keyShot: shot("by-the-fire", "btf-01", "Frame from By the Fire", "full-bleed"),
     shots: [
-      { id: "btf-1", alt: "Frame from By the Fire", composition: "small-window", side: "left", aspect: 1.37 },
+      shot("by-the-fire", "btf-02", "Frame from By the Fire", "large-window", "left"),
+      shot("by-the-fire", "btf-03", "Frame from By the Fire", "small-window", "right"),
+      shot("by-the-fire", "btf-04", "Clip from By the Fire", "large-window", "left"),
     ],
+    lastShot: shot("by-the-fire", "btf-05", "Frame from By the Fire", "large-window", "right"),
     recognition: [
       { kind: "Winner, Best Cinematography", festival: "FHIFF (Italy)" },
       { kind: "Official Selection", festival: "Berlin Commercial Awards", year: 2026, note: "Cultural Work" },
@@ -116,7 +137,14 @@ export const films: Film[] = [
   },
 ];
 
-export const portraits: Shot[] = [
-  { id: "portrait-1", alt: "Portrait of Nicolás J. Scatamacchia", composition: "full-bleed", aspect: 1.66 },
-  { id: "portrait-2", alt: "Nicolás J. Scatamacchia on set", composition: "small-window", side: "left", aspect: 0.8 },
+export const portraits = {
+  opening: shot("portraits", "portrait-01", "Portrait of Nicolás J. Scatamacchia", "full-bleed"),
+  behind: shot("portraits", "portrait-02", "Nicolás J. Scatamacchia on set", "small-window", "left"),
+  second: shot("portraits", "portrait-03", "Nicolás J. Scatamacchia", "small-window", "right"),
+};
+
+/** The opening's two film shots: film 1 large right, film 2 small left. */
+export const openingShots = [
+  { ...shot("what-else-is-there", "wei-02", "Frame from What Else is There?", "large-window", "right"), id: "open-wei-02" },
+  { ...shot("by-the-fire", "btf-02", "Frame from By the Fire", "small-window", "left"), id: "open-btf-02" },
 ];

@@ -86,12 +86,26 @@ void main() {
 }
 `;
 
+export type Rect = { x: number; y: number; w: number; h: number };
+
+/** One picture to draw this frame, at a rect in CSS px relative to the canvas (the viewport). */
+export type Slot = {
+  tex: T.Texture;
+  aspect: number;
+  rect: Rect;
+  full: boolean;
+  weave: WeaveOffset;
+  progress: number;
+  develop: boolean;
+  dye: number;
+};
+
 export class PictureEngine {
   readonly renderer: T.WebGLRenderer;
   private scene: T.Scene;
   private camera: T.Camera;
   private mat: T.ShaderMaterial;
-  private tex: T.Texture | null = null;
+  private tex: T.Texture | null = null; // lab: the single loaded source
   private aspect = 16 / 9;
   readonly timer: GpuTimer;
   cpuMs = 0;
@@ -100,6 +114,7 @@ export class PictureEngine {
     this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, premultipliedAlpha: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
     this.renderer.setClearColor(0x000000, 0);
+    this.renderer.autoClear = false;
     this.scene = new THREE.Scene();
     this.camera = new THREE.Camera();
     this.mat = new THREE.ShaderMaterial({
@@ -119,7 +134,6 @@ export class PictureEngine {
         uProgress: { value: 1 },
         uDevelop: { value: 1 },
         uDye: { value: 0.03 },
-        // Picture black #171513 mixed with Safelight red, kept dim (low luminance, never bright)
         uPaper: { value: new THREE.Vector3(0.3, 0.075, 0.05) }, // safelit paper: dim red, luminance ~0.12
         uCast: { value: new THREE.Vector3(1.0, 0.55, 0.45) }, // residual warm cast as the lights come up
       },
@@ -133,24 +147,76 @@ export class PictureEngine {
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight, false);
   }
 
-  setSource(src: HTMLCanvasElement | HTMLImageElement | ImageBitmap) {
+  /** Make a texture from a decoded image, a canvas or a playing video. Graded sRGB passes straight through. */
+  createTexture(src: HTMLImageElement | HTMLCanvasElement | HTMLVideoElement): T.Texture {
     const { THREE } = this;
-    this.tex?.dispose();
-    const tex = src instanceof HTMLCanvasElement ? new THREE.CanvasTexture(src) : new THREE.Texture(src as HTMLImageElement);
-    tex.colorSpace = THREE.NoColorSpace; // pass graded sRGB values straight through
-    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    const tex =
+      src instanceof HTMLVideoElement ? new THREE.VideoTexture(src)
+      : src instanceof HTMLCanvasElement ? new THREE.CanvasTexture(src)
+      : new THREE.Texture(src);
+    tex.colorSpace = THREE.NoColorSpace;
     tex.magFilter = THREE.LinearFilter;
-    tex.generateMipmaps = true;
-    tex.anisotropy = 4;
+    if (src instanceof HTMLVideoElement) {
+      tex.minFilter = THREE.LinearFilter;
+      tex.generateMipmaps = false;
+    } else {
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.generateMipmaps = true;
+      tex.anisotropy = 4;
+    }
     tex.needsUpdate = true;
-    this.tex = tex;
-    const w = (src as HTMLCanvasElement).width, h = (src as HTMLCanvasElement).height;
-    this.aspect = w / h;
-    this.mat.uniforms.uTex.value = tex;
+    return tex;
   }
 
-  /** Picture rect in CSS px (left, top, width, height), shared with the DOM for text placement. */
-  rectPx(comp: Composition, side: "left" | "right") {
+  /** Upload a texture now (so the first draw never stalls mid-scroll). */
+  upload(tex: T.Texture) { this.renderer.initTexture(tex); }
+
+  /** Draw every visible slot. An empty list clears the canvas. */
+  frame(slots: Slot[]) {
+    const t0 = performance.now();
+    const vw = this.canvas.clientWidth, vh = this.canvas.clientHeight;
+    const u = this.mat.uniforms;
+    this.timer.measure(() => {
+      this.renderer.clear();
+      for (const s of slots) {
+        const r = s.rect;
+        const dxPx = s.weave.x * r.h, dyPx = s.weave.y * r.h; // weave is a fraction of picture height
+        if (s.full) {
+          const ra = r.w / r.h; // cover crop
+          u.uUvScale.value.set(ra > s.aspect ? 1 : ra / s.aspect, ra > s.aspect ? s.aspect / ra : 1);
+          u.uRect.value.set(r.x / vw, 1 - (r.y + r.h) / vh, r.w / vw, r.h / vh);
+          u.uShift.value.set(dxPx / r.w, dyPx / r.h);
+          u.uOverscan.value = 0.01;
+          u.uRot.value = (s.weave.rot * Math.PI) / 180;
+        } else {
+          // windows: the whole window moves, edges included
+          u.uUvScale.value.set(1, 1);
+          u.uRect.value.set((r.x + dxPx) / vw, 1 - (r.y + r.h - dyPx) / vh, r.w / vw, r.h / vh);
+          u.uShift.value.set(0, 0);
+          u.uOverscan.value = 0;
+          u.uRot.value = 0;
+        }
+        u.uRectPx.value.set(r.w, r.h);
+        u.uTex.value = s.tex;
+        u.uProgress.value = s.progress;
+        u.uDevelop.value = s.develop ? 1 : 0;
+        u.uDye.value = s.dye;
+        this.renderer.render(this.scene, this.camera);
+      }
+    });
+    this.cpuMs = this.cpuMs * 0.9 + (performance.now() - t0) * 0.1;
+  }
+
+  /* ---------- lab: one source, composition computed here ---------- */
+
+  setSource(src: HTMLCanvasElement | HTMLImageElement) {
+    this.tex?.dispose();
+    this.tex = this.createTexture(src);
+    this.aspect = (src as HTMLCanvasElement).width / (src as HTMLCanvasElement).height;
+  }
+
+  /** Picture rect in CSS px for a composition (the real page takes rects from the DOM instead). */
+  rectPx(comp: Composition, side: "left" | "right"): Rect {
     const vw = this.canvas.clientWidth, vh = this.canvas.clientHeight;
     if (comp === "full-bleed") return { x: 0, y: 0, w: vw, h: vh };
     let w = (comp === "large-window" ? 0.62 : 0.34) * vw;
@@ -163,34 +229,10 @@ export class PictureEngine {
 
   render(s: PictureState) {
     if (!this.tex) return;
-    const t0 = performance.now();
-    const u = this.mat.uniforms;
-    const vw = this.canvas.clientWidth, vh = this.canvas.clientHeight;
-    const r = this.rectPx(s.composition, s.side);
-    const full = s.composition === "full-bleed";
-    // weave: x/y are a fraction of picture height
-    const dxPx = s.weave.x * r.h, dyPx = s.weave.y * r.h;
-    if (full) {
-      const va = vw / vh;
-      u.uUvScale.value.set(va > this.aspect ? 1 : va / this.aspect, va > this.aspect ? this.aspect / va : 1);
-      u.uRect.value.set(0, 0, 1, 1);
-      u.uShift.value.set(dxPx / vw, dyPx / vh);
-      u.uOverscan.value = 0.01;
-      u.uRot.value = (s.weave.rot * Math.PI) / 180;
-    } else {
-      // windows: the whole window moves, edges included
-      u.uUvScale.value.set(1, 1);
-      u.uRect.value.set((r.x + dxPx) / vw, 1 - (r.y + r.h - dyPx) / vh, r.w / vw, r.h / vh);
-      u.uShift.value.set(0, 0);
-      u.uOverscan.value = 0;
-      u.uRot.value = 0;
-    }
-    u.uRectPx.value.set(r.w, r.h);
-    u.uProgress.value = s.progress;
-    u.uDevelop.value = s.develop ? 1 : 0;
-    u.uDye.value = s.dye;
-    this.timer.measure(() => this.renderer.render(this.scene, this.camera));
-    this.cpuMs = this.cpuMs * 0.9 + (performance.now() - t0) * 0.1;
+    this.frame([{
+      tex: this.tex, aspect: this.aspect, rect: this.rectPx(s.composition, s.side),
+      full: s.composition === "full-bleed", weave: s.weave, progress: s.progress, develop: s.develop, dye: s.dye,
+    }]);
   }
 
   dispose() { this.tex?.dispose(); this.mat.dispose(); this.renderer.dispose(); }

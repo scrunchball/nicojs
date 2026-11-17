@@ -27,8 +27,20 @@ Not yet done / caveats:
 - GPU time not measured on target hardware: recordings come from software WebGL (SwiftShader). Needs a check on an M1 Air and a recent iPhone in the lab's Frame time readout.
 - "From negative" variant (optional, off by default) not built.
 
+## Stage 4: Projector (branch `stage-04-projector`): built, awaiting Adam's review
+Done:
+- Placeholder media for all 13 slots (`public/media/`, labelled with their filename); swap guide in `docs/MEDIA.md`.
+- Reels now follow the brief: key full-bleed + subtitle, 3 shots in alternating windows (one a clip), second sentence, last shot, links. Opening uses film 1 large right + film 2 small left; Behind the camera has two portraits.
+- The two canvases on the real page (2 WebGL contexts, verified), DOM-to-canvas sync, texture streaming with the DOM picture as placeholder, video textures for clips, text-layer weave on every title/subtitle group, context-loss recovery, opening portrait develops on its 2.5 s timer after 1 s of black.
+- Checks: fast-scroll runs (450 px and 900 px steps) compared against the no-JS page: 0 blank slots, every slot drawn by the canvas, no console errors.
+
+Not yet / caveats:
+- Scroll is still native, so canvas pictures can trail the DOM text by a frame during fast scrolling. Lenis (Stage 5) puts both on one clock.
+- Development on scroll, cuts, scrub and the PROYECTOR motion toggle are Stage 5. Clips loop for now.
+- All media are placeholders until Adam uploads Nico's frames and clips.
+
 ## Not started
-Stage 4 projector, 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
+Stage 5 timeline, 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 
 ## Waiting on Adam / Nico
 - Cloudflare account and Pages connection.

@@ -1,0 +1,39 @@
+{
+  "_readme": "Every picture and clip the site shows. Replace a placeholder by dropping a file with the SAME name into public/media/<folder>/. See docs/MEDIA.md.",
+  "folders": {
+    "what-else-is-there": {
+      "label": "What Else is There? (Super 16, 1.66:1)",
+      "size": [1920, 1158],
+      "palette": [[214, 178, 128], [92, 118, 132], [46, 38, 28]],
+      "shots": [
+        { "id": "wei-01", "kind": "image", "note": "Key image, full-bleed" },
+        { "id": "wei-02", "kind": "image", "note": "Large window, right (also used in the opening)" },
+        { "id": "wei-03", "kind": "image", "note": "Small window, left" },
+        { "id": "wei-04", "kind": "clip", "note": "Clip, large window, right (6-12 s, no text)" },
+        { "id": "wei-05", "kind": "image", "note": "Last shot, large window, left" }
+      ]
+    },
+    "by-the-fire": {
+      "label": "By the Fire (16mm, 1.37:1)",
+      "size": [1920, 1402],
+      "palette": [[196, 92, 40], [58, 52, 44], [18, 14, 12]],
+      "shots": [
+        { "id": "btf-01", "kind": "image", "note": "Key image, full-bleed" },
+        { "id": "btf-02", "kind": "image", "note": "Large window, left (also used in the opening)" },
+        { "id": "btf-03", "kind": "image", "note": "Small window, right" },
+        { "id": "btf-04", "kind": "clip", "note": "Clip, large window, left (6-12 s, no text)" },
+        { "id": "btf-05", "kind": "image", "note": "Last shot, large window, right" }
+      ]
+    },
+    "portraits": {
+      "label": "Portraits of Nico",
+      "size": [2400, 1600],
+      "palette": [[150, 140, 128], [70, 64, 58], [20, 18, 16]],
+      "shots": [
+        { "id": "portrait-01", "kind": "image", "note": "Opening portrait, full-bleed, landscape 3:2, 2400px+", "size": [2400, 1600] },
+        { "id": "portrait-02", "kind": "image", "note": "Behind the camera, small window, portrait 4:5", "size": [1600, 2000] },
+        { "id": "portrait-03", "kind": "image", "note": "Second portrait, small window, portrait 4:5 (B&W-friendly)", "size": [1600, 2000] }
+      ]
+    }
+  }
+}
