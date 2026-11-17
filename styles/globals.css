@@ -1,0 +1,98 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { background: var(--gate-black); color: var(--bone); -webkit-text-size-adjust: 100%; scroll-behavior: auto; }
+body {
+  background: var(--gate-black);
+  font-family: var(--font-mono);
+  font-size: var(--t-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+
+:focus-visible { outline: 2px solid var(--safelight-text); outline-offset: 3px; }
+
+.skip { position: fixed; left: var(--margin); top: var(--s2); z-index: 100; padding: var(--s1) var(--s2);
+  background: var(--bone); color: var(--ink-on-red); font-size: var(--t-label); font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; transform: translateY(-300%); }
+.skip:focus { transform: none; }
+
+/* ---------- Type ---------- */
+.label { font-family: var(--font-mono); font-weight: 700; font-size: var(--t-label); line-height: 1.4;
+  letter-spacing: 0.14em; text-transform: uppercase; }
+.silver { color: var(--silver); }
+.name { font-family: var(--font-serif); font-weight: 400; font-size: var(--t-name); line-height: 0.86; letter-spacing: -0.02em; }
+.title { font-family: var(--font-serif); font-weight: 400; font-size: var(--t-title); line-height: 0.9; letter-spacing: -0.015em; }
+.intertitle { font-family: var(--font-serif); font-weight: 400; font-size: var(--t-intertitle); line-height: 1.02; letter-spacing: -0.005em; }
+.intertitle em, .title em { font-style: italic; }
+.subtitle { font-family: var(--font-mono); font-size: var(--t-subtitle); line-height: 1.45; }
+.body { font-size: var(--t-body); line-height: 1.6; }
+
+/* ---------- Chrome (the only fixed interface) ---------- */
+.chrome { position: fixed; z-index: 50; pointer-events: none; }
+.chrome > * { pointer-events: auto; }
+.chrome a { color: var(--bone); }
+.chrome-name { top: var(--s3); left: var(--margin); }
+.chrome-nav { top: var(--s3); right: var(--margin); display: flex; gap: var(--s4); align-items: baseline; }
+.chrome-nav ul { list-style: none; display: flex; gap: var(--s3); }
+.chrome-nav .langs { color: var(--silver); }
+.chrome-nav a { display: inline-block; padding: 8px 0; transition: color 200ms var(--ease-projector); }
+.chrome-nav a[aria-current="true"], .chrome-nav a:hover { color: var(--safelight-text); }
+.chrome-projector { left: var(--margin); bottom: var(--s3); color: var(--silver); display: flex; gap: var(--s2); }
+
+/* ---------- Frames: every beat is a screen of black ---------- */
+.scene { position: relative; }
+.frame { position: relative; min-height: 100svh; display: grid; padding: var(--s6) var(--margin); }
+.frame--rest { min-height: 60svh; }
+.frame--center { place-content: center; text-align: center; }
+.frame--text { align-content: center; }
+.frame--text .block { max-width: 40%; }
+.frame--bleed { padding: 0; }
+.frame--bleed .pic { position: absolute; inset: 0; }
+.frame--bleed .caption { position: absolute; left: 0; right: 0; bottom: 12%; text-align: center; padding: 0 var(--margin); }
+.caption p { max-width: 62ch; margin: 0 auto; text-shadow: var(--subtitle-shadow); }
+
+/* Pictures: clean and borderless; placeholders are flat Picture black until real frames arrive */
+.pic { background: var(--picture-black); width: 100%; height: 100%; object-fit: cover; }
+.pic--ph { background: linear-gradient(135deg, #1b1917, #141210 60%, #1a1816); }
+.window { align-self: center; padding-block: 12svh; }
+.window .pic { width: 100%; height: auto; }
+.window--large { width: 62%; }
+.window--small { width: 34%; }
+.window--right { justify-self: end; margin-right: 8vw; }
+.window--left { justify-self: start; margin-left: 8vw; }
+.window--center { justify-self: center; }
+.window--large.window--right { margin-right: 0; }
+.window--large.window--left { margin-left: 0; }
+
+.marker-row { display: grid; gap: var(--s2); justify-items: center; text-align: center; }
+.stack { display: grid; gap: var(--s3); }
+.link { display: inline-block; padding: var(--s1) 0; border-bottom: 1px solid var(--silver); }
+.link:hover { color: var(--safelight-text); border-color: var(--safelight-text); }
+
+/* ---------- End title: the only red ---------- */
+.frame--red { background: var(--safelight); color: var(--bone); }
+.frame--red .title { max-width: 14ch; }
+.frame--red a { color: var(--bone); border-color: var(--bone); }
+
+/* ---------- Circuit ---------- */
+.recognition { display: grid; gap: var(--s1); max-width: 40%; }
+.recognition .festival { font-family: var(--font-serif); font-size: var(--t-intertitle); line-height: 1.02; }
+
+@media (max-width: 1199px) {
+  .window--large { width: 70%; }
+  .window--small { width: 46%; }
+}
+@media (max-width: 809px) {
+  .frame { padding: var(--s6) var(--margin); }
+  .frame--text .block, .recognition { max-width: 100%; }
+  .window--large { width: 86%; }
+  .window--small { width: 60%; }
+  .window--right, .window--left { margin-inline: 0; }
+  .window--right { justify-self: end; }
+  .chrome-nav { gap: var(--s2); flex-wrap: wrap; justify-content: flex-end; max-width: 60vw; }
+  .chrome-nav ul { gap: var(--s2); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

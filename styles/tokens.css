@@ -1,0 +1,46 @@
+/* Design tokens. Mirrored into the film-engine shaders from Stage 3. */
+:root {
+  /* Colour: contrast measured against --gate-black */
+  --gate-black: #121110;
+  --picture-black: #171513;
+  --bone: #ece6da; /* 15.2:1 */
+  --silver: #9a948a; /* 6.3:1 */
+  /* Deeper red chosen by Adam. Bone text on it is 4.58:1. */
+  --safelight: #c42a1a;
+  /* Lighter tint for SMALL red text on black only (4.7:1); the deep red alone is 3.3:1 there. */
+  --safelight-text: #e8441e;
+  --ink-on-red: #121110;
+  --subtitle-shadow: 0 0 14px rgb(0 0 0 / 0.55);
+
+  /* Type */
+  --font-serif: "Instrument Serif", "Times New Roman", serif;
+  --font-mono: "Courier Prime", "Courier New", monospace;
+  --t-name: clamp(76px, 16.5vw, 280px);
+  --t-title: clamp(60px, 12vw, 200px);
+  --t-intertitle: clamp(40px, 6vw, 104px);
+  --t-subtitle: clamp(17px, 1.5vw, 24px);
+  --t-body: clamp(14px, 1.1vw, 16px);
+  --t-label: clamp(11px, 0.85vw, 12px);
+
+  /* Grid: 12 cols, 48px margins, 24px gutters */
+  --margin: 48px;
+  --gutter: 24px;
+
+  /* Spacing scale */
+  --s1: 8px;
+  --s2: 16px;
+  --s3: 24px;
+  --s4: 40px;
+  --s5: 64px;
+  --s6: 104px;
+  --s7: 168px;
+
+  --ease-projector: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (max-width: 1199px) {
+  :root { --margin: 32px; --gutter: 20px; }
+}
+@media (max-width: 809px) {
+  :root { --margin: 20px; --gutter: 16px; }
+}
