@@ -1,18 +1,20 @@
 "use client";
 
 /**
- * Play the film (Adam's direction, D-74).
- * - Over the film (the watch beat), a small Safelight-red "PLAY FILM" tag follows the cursor; it scales into view on
- *   hover and away on leave. Touch screens and keyboard users get the same tag, centred, as a normal button.
- * - Click: the tag animates away, a rounded frame grows out of the reel container and resizes to the film's own
- *   shape, the grain fades out, then the film slowly fades in and plays; the controls follow. Esc / CLOSE reverses it.
- * Source: a plain MP4 URL (the clips for now; the full films from R2, D-73).
+ * Play the film (Adam's direction, D-74, D-79).
+ * - On the watch beat a small Safelight-red "PLAY FILM" tag (outline play icon) is there from the moment the beat is
+ *   on screen: it starts where the pointer is (or centred) and follows the cursor. Touch and keyboard get it centred.
+ * - Click: a camera shutter rolls down over the whole screen; behind it the player room is set up (nothing of the
+ *   page shows through); the shutter rolls on and reveals the film in its rounded frame, which then fades in and
+ *   plays. Esc / CLOSE: the shutter rolls over again and reveals the page. Reduced motion: no shutter.
+ * Source: the full films on R2 (1080p; 720p on phones / data saver), D-78.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Shot } from "@/content/site";
 
 const FPS = 24;
+const ROLL_MS = 420;
 const tc = (s: number) => {
   if (!isFinite(s)) s = 0;
   const f = Math.floor(s * FPS), ff = f % FPS, ss = Math.floor(f / FPS) % 60, mm = Math.floor(f / FPS / 60) % 60, hh = Math.floor(f / FPS / 3600);
@@ -20,30 +22,97 @@ const tc = (s: number) => {
   return `${p(hh)}:${p(mm)}:${p(ss)}:${p(ff)}`;
 };
 
-type Rect = { left: number; top: number; width: number; height: number };
+/** Outline play triangle with softly rounded corners. */
+function PlayIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg className="icon-play-line" width={size} height={size * 1.15} viewBox="0 0 12 14" aria-hidden="true">
+      <path d="M2.2 1.9 L10.4 7 L2.2 12.1 Z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function PauseIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg className="icon-play-line" width={size} height={size * 1.15} viewBox="0 0 12 14" aria-hidden="true">
+      <rect x="2.2" y="2" width="2.6" height="10" rx="1" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="7.2" y="2" width="2.6" height="10" rx="1" fill="none" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
+// the pointer's last position on the page, so the tag can start right under it
+const pointer = { x: -1, y: -1 };
+if (typeof window !== "undefined") {
+  window.addEventListener("pointermove", (e) => { pointer.x = e.clientX; pointer.y = e.clientY; }, { passive: true });
+}
+
+/** The camera shutter: one dark panel with a skewed, lit leading edge, rolling down across the whole screen. */
+function useShutter() {
+  const el = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const d = document.createElement("div");
+    d.className = "shutter";
+    d.setAttribute("aria-hidden", "true");
+    d.innerHTML = '<div class="shutter-panel"><i class="shutter-edge shutter-edge--lead"></i><i class="shutter-edge shutter-edge--tail"></i></div>';
+    document.body.appendChild(d);
+    el.current = d;
+    return () => { d.remove(); };
+  }, []);
+  const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /** Roll from above the screen to covering it. */
+  const cover = useCallback(async () => {
+    const p = el.current?.firstElementChild as HTMLElement | null;
+    if (!p || reduced) return;
+    el.current!.classList.add("is-on");
+    await p.animate([{ transform: "translateY(-115%) rotate(-2.2deg)" }, { transform: "translateY(0%) rotate(-2.2deg)" }],
+      { duration: ROLL_MS, easing: "cubic-bezier(0.55, 0, 0.35, 1)", fill: "forwards" }).finished;
+  }, [reduced]);
+  /** Roll on, off the bottom of the screen, revealing what's behind. */
+  const reveal = useCallback(async () => {
+    const p = el.current?.firstElementChild as HTMLElement | null;
+    if (!p || reduced) return;
+    await p.animate([{ transform: "translateY(0%) rotate(-2.2deg)" }, { transform: "translateY(115%) rotate(-2.2deg)" }],
+      { duration: ROLL_MS, easing: "cubic-bezier(0.55, 0, 0.35, 1)", fill: "forwards" }).finished;
+    el.current!.classList.remove("is-on");
+  }, [reduced]);
+  return { cover, reveal };
+}
 
 export function WatchFilm({ film, title, label }: { film: Shot; title: string; label: string }) {
-  const [from, setFrom] = useState<Rect | null>(null);
+  const [open, setOpen] = useState(false);
+  const [revealed, setRevealed] = useState(false);
   const [fine, setFine] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
-  const leaving = useRef(false);
+  const busy = useRef(false);
+  const shutter = useShutter();
 
-  const close = useCallback(() => { setFrom(null); leaving.current = false; btn.current?.classList.remove("is-gone"); btn.current?.focus({ preventScroll: true }); }, []);
+  const start = useCallback(async () => {
+    if (busy.current || open) return;
+    busy.current = true;
+    btn.current?.classList.add("is-gone"); // the tag animates away
+    await new Promise((r) => setTimeout(r, 160));
+    await shutter.cover(); // the page is fully covered
+    setRevealed(false);
+    setOpen(true); // the room is set up behind the shutter
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await shutter.reveal(); // the shutter rolls on and reveals the film's frame
+    setRevealed(true); // ...which then fades in and plays
+    busy.current = false;
+  }, [open, shutter]);
 
-  const start = useCallback(() => {
-    const b = btn.current;
-    if (!b || leaving.current) return;
-    leaving.current = true;
-    b.classList.add("is-gone"); // the tag animates away first
-    // the frame grows out of the reel container (the film's picture fills it)
-    const frame = b.closest<HTMLElement>(".frame--watch");
-    const pic = frame?.querySelector<HTMLElement>(".pic");
-    const r = (pic ?? frame)?.getBoundingClientRect();
-    const rect = r ? { left: r.left, top: r.top, width: r.width, height: r.height } : { left: 0, top: 0, width: innerWidth, height: innerHeight };
-    window.setTimeout(() => setFrom(rect), 200);
-  }, []);
+  const close = useCallback(async () => {
+    if (busy.current) return;
+    busy.current = true;
+    await shutter.cover(); // roll over the player
+    setOpen(false); // back to the page, behind the shutter
+    setRevealed(false);
+    btn.current?.classList.remove("is-gone");
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await shutter.reveal();
+    busy.current = false;
+    btn.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
+  }, [shutter]);
 
-  // the cursor tag: follows the pointer over the film, eased, on fine pointers only
+  // the cursor tag: present as soon as the beat is on screen, then follows the pointer (fine pointers only)
   useEffect(() => {
     const b = btn.current;
     const frame = b?.closest<HTMLElement>(".frame--watch");
@@ -52,30 +121,28 @@ export function WatchFilm({ film, title, label }: { film: Shot; title: string; l
     setFine(isFine);
     if (!isFine) return;
     frame.classList.add("has-play-cursor");
-    let x = innerWidth / 2, y = innerHeight / 2, tx = x, ty = y, raf = 0, on = false;
+    let x = -1, y = -1, raf = 0;
     const tick = () => {
+      raf = requestAnimationFrame(tick);
+      // without the film engine the tag simply sits in its place as a normal button
+      const film = document.documentElement.classList.contains("film");
+      b.classList.toggle("nofilm", !film);
+      frame.classList.toggle("has-play-cursor", film);
+      if (!film) return;
+      const active = !!frame.closest(".frame-slot[data-active]");
+      b.classList.toggle("is-on", active);
+      if (!active) { x = -1; return; }
+      const tx = pointer.x >= 0 ? pointer.x : innerWidth / 2, ty = pointer.y >= 0 ? pointer.y : innerHeight / 2;
+      if (x < 0) { x = tx; y = ty; } // appear right under the pointer, not sliding in from a corner
       x += (tx - x) * 0.22; y += (ty - y) * 0.22;
       b.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%)`;
-      if (on || Math.abs(tx - x) + Math.abs(ty - y) > 0.5) raf = requestAnimationFrame(tick); else raf = 0;
     };
-    const move = (e: PointerEvent) => {
-      tx = e.clientX; ty = e.clientY;
-      if (!on) { on = true; x = tx; y = ty; b.classList.add("is-on"); }
-      if (!raf) raf = requestAnimationFrame(tick);
-    };
-    const leave = () => { on = false; b.classList.remove("is-on"); };
-    const click = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).closest("a")) return; // the festival link keeps working
-      start();
-    };
-    frame.addEventListener("pointermove", move);
-    frame.addEventListener("pointerleave", leave);
+    raf = requestAnimationFrame(tick);
+    const click = () => { start(); };
     frame.addEventListener("click", click);
     return () => {
       cancelAnimationFrame(raf);
       frame.classList.remove("has-play-cursor");
-      frame.removeEventListener("pointermove", move);
-      frame.removeEventListener("pointerleave", leave);
       frame.removeEventListener("click", click);
     };
   }, [start]);
@@ -89,22 +156,20 @@ export function WatchFilm({ film, title, label }: { film: Shot; title: string; l
         onClick={(e) => { e.stopPropagation(); start(); }}
         aria-haspopup="dialog"
       >
-        {label}
+        <PlayIcon size={10} />
+        <span>{label}</span>
       </button>
       <noscript>
         <a className="label link" href={film.loop}>{label} ↗</a>
       </noscript>
-      {from && createPortal(<PlayerRoom film={film} title={title} from={from} onClose={close} />, document.body)}
+      {open && createPortal(<PlayerRoom film={film} title={title} revealed={revealed} onClose={close} />, document.body)}
     </>
   );
 }
 
-type Phase = "grow" | "open" | "play" | "closing";
-
-function PlayerRoom({ film, title, from, onClose }: { film: Shot; title: string; from: Rect; onClose: () => void }) {
+function PlayerRoom({ film, title, revealed, onClose }: { film: Shot; title: string; revealed: boolean; onClose: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
-  const [phase, setPhase] = useState<Phase>("grow");
   const [playing, setPlaying] = useState(false);
   const [t, setT] = useState(0);
   const [d, setD] = useState(0);
@@ -113,16 +178,14 @@ function PlayerRoom({ film, title, from, onClose }: { film: Shot; title: string;
   // phones and data saver get the lighter stream; everyone else the full-quality one
   const [src] = useState(() => {
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-    const small = innerWidth < 810 || !!conn?.saveData;
-    return small && film.sd ? film.sd : film.loop;
+    return (innerWidth < 810 || !!conn?.saveData) && film.sd ? film.sd : film.loop;
   });
-  const [vp, setVp] = useState({ w: typeof window !== "undefined" ? innerWidth : 1280, h: typeof window !== "undefined" ? innerHeight : 800 });
+  const [vp, setVp] = useState({ w: innerWidth, h: innerHeight });
 
   // the film's own shape, as large as fits with room for the controls
-  const w = Math.min(vp.w * 0.9, (vp.h * 0.84 - 88) * ar);
+  const w = Math.min(vp.w * 0.9, (vp.h * 0.84 - 96) * ar);
   const h = w / ar;
-  const target: Rect = { left: (vp.w - w) / 2, top: (vp.h - h - 72) / 2, width: w, height: h };
-  const rect = phase === "grow" || phase === "closing" ? from : target;
+  const frame = { left: (vp.w - w) / 2, top: (vp.h - h - 80) / 2, width: w, height: h };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -130,29 +193,23 @@ function PlayerRoom({ film, title, from, onClose }: { film: Shot; title: string;
     window.dispatchEvent(new CustomEvent("player", { detail: { open: true } }));
     const onResize = () => setVp({ w: innerWidth, h: innerHeight });
     window.addEventListener("resize", onResize);
-    const a = requestAnimationFrame(() => requestAnimationFrame(() => setPhase("open")));
-    const b = window.setTimeout(() => { setPhase("play"); video.current?.play().catch(() => {}); }, 760);
-    // focus moves into the dialog for keyboard and screen-reader users, without a ring after a mouse click
     closeBtn.current?.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
     return () => {
-      cancelAnimationFrame(a); clearTimeout(b);
       window.removeEventListener("resize", onResize);
       root.classList.remove("watching");
       window.dispatchEvent(new CustomEvent("player", { detail: { open: false } }));
     };
   }, []);
 
-  const close = useCallback(() => {
-    video.current?.pause();
-    setPhase("closing");
-    window.setTimeout(onClose, 720);
-  }, [onClose]);
+  // once the shutter has rolled away, the film fades in and plays
+  useEffect(() => { if (revealed) video.current?.play().catch(() => {}); }, [revealed]);
 
   const toggle = useCallback(() => {
     const v = video.current;
     if (!v) return;
     if (v.paused) v.play().catch(() => {}); else v.pause();
   }, []);
+  const close = useCallback(() => { video.current?.pause(); onClose(); }, [onClose]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -173,14 +230,12 @@ function PlayerRoom({ film, title, from, onClose }: { film: Shot; title: string;
     return () => window.removeEventListener("keydown", onKey);
   }, [close, toggle]);
 
-  const shown = phase === "open" || phase === "play";
   return (
-    <div className={`player-room phase-${phase}`} role="dialog" aria-modal="true" aria-label={title}>
-      <div className="player-backdrop" style={{ opacity: shown ? 1 : 0 }} onClick={close} />
-      <button ref={closeBtn} type="button" className="player-close label" style={{ opacity: shown ? 1 : 0 }} onClick={close}>
+    <div className={`player-room ${revealed ? "is-revealed" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+      <button ref={closeBtn} type="button" className="player-close player-pill label" onClick={close}>
         CLOSE <span aria-hidden="true">×</span>
       </button>
-      <div className="player-frame" style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }}>
+      <div className="player-frame" style={frame}>
         <video
           ref={video}
           src={src}
@@ -189,7 +244,6 @@ function PlayerRoom({ film, title, from, onClose }: { film: Shot; title: string;
           preload="auto"
           muted={muted}
           onClick={toggle}
-          style={{ opacity: phase === "play" ? 1 : 0 }}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onTimeUpdate={(e) => setT(e.currentTarget.currentTime)}
@@ -201,9 +255,9 @@ function PlayerRoom({ film, title, from, onClose }: { film: Shot; title: string;
           onEnded={() => setPlaying(false)}
         />
       </div>
-      <div className="player-bar label" style={{ top: target.top + target.height + 16, opacity: phase === "play" ? 1 : 0 }}>
-        <button type="button" onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="player-btn">
-          <span className={playing ? "icon-pause" : "icon-play"} aria-hidden="true" />
+      <div className="player-bar label" style={{ top: frame.top + frame.height + 22 }}>
+        <button type="button" onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="player-round">
+          {playing ? <PauseIcon /> : <PlayIcon />}
         </button>
         <span className="player-tc">{tc(t)}</span>
         <input
@@ -218,11 +272,11 @@ function PlayerRoom({ film, title, from, onClose }: { film: Shot; title: string;
           style={{ ["--p" as string]: d ? `${(t / d) * 100}%` : "0%" }}
           onChange={(e) => { const v = video.current; if (v) v.currentTime = Number(e.target.value); setT(Number(e.target.value)); }}
         />
-        <span className="player-tc silver">{tc(d)}</span>
-        <button type="button" className="player-btn" onClick={() => setMuted((m) => !m)} aria-pressed={!muted}>
-          SOUND <span aria-hidden="true">{muted ? "○" : "●"}</span>
+        <span className="player-tc player-tc--total">{tc(d)}</span>
+        <button type="button" className="player-pill" onClick={() => setMuted((m) => !m)} aria-pressed={!muted}>
+          SOUND <span aria-hidden="true" className="player-dot">{muted ? "○" : "●"}</span>
         </button>
-        <button type="button" className="player-btn" onClick={() => video.current?.requestFullscreen?.()}>FULL</button>
+        <button type="button" className="player-pill" onClick={() => video.current?.requestFullscreen?.()}>FULL</button>
       </div>
     </div>
   );

@@ -89,9 +89,6 @@ export function Screening() {
                 <Picture shot={film.loop} />
                 <div className="frame frame--center watch" style={{ position: "relative", background: "transparent" }}>
                   <WatchFilm film={film.film} title={film.title} label={t("labels.play")} />
-                  <a className="label link watch-link" href={film.link.href} rel="noopener" target="_blank">
-                    {t("labels.berlinCommercial")} ↗
-                  </a>
                 </div>
               </Frame>
             </section>

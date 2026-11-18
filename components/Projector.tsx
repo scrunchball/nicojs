@@ -139,7 +139,9 @@ export function Projector() {
         if (s.el instanceof HTMLVideoElement) {
           if (reduced || (lite && s.el.dataset.loop !== undefined)) { s.loading = false; return; } // the poster stays in the DOM
           const v = s.el;
-          const scrub = v.dataset.scrub ?? (v.dataset.loop !== undefined ? v.getAttribute("src") ?? undefined : undefined);
+          // remember a loop's own URL once: releasing a far-away loop clears its src, and it must come back rolling
+          if (v.dataset.loop !== undefined && !v.dataset.loopUrl && v.getAttribute("src") && !v.src.startsWith("blob:")) v.dataset.loopUrl = v.getAttribute("src")!;
+          const scrub = v.dataset.scrub ?? (v.dataset.loop !== undefined ? v.dataset.loopUrl : undefined);
           if (scrub && !v.src.startsWith("blob:")) {
             // Scrub clips (all-intra) and background loops are held in memory as blobs: seeking and looping then
             // never depend on the server honouring range requests (Cloudflare Pages may answer 200 with the whole file).

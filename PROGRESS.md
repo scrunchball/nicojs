@@ -110,6 +110,9 @@ Not yet / caveats:
 ### Full films on R2 (D-78)
 - Both films encoded (1080p + 720p) and uploaded to R2; the player streams them: desktop 1080p, phones 720p. Checked: full length, correct shape, seeking to 2:00 works, no errors.
 
+### Player and loops (D-79..D-82)
+- Camera-shutter transition into and out of the player; smaller PLAY FILM tag with an outline icon, there from the start; prettier glowing controls; loops always roll (bug fixed); festival link removed from the watch beat.
+
 ## Not started
 404 + Impressum/privacy; accessibility + SEO pass (screen reader, metadata, sitemap, social images); launch (domain, R2 for the films, headers, monitoring). Backend (CMS) to be decided., 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 
