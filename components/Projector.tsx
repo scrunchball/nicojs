@@ -231,6 +231,7 @@ export function Projector() {
         active.frame.style.removeProperty("--o");
         active.frame.style.removeProperty("--screen");
         active.frame.style.clipPath = "";
+        active.frame.querySelectorAll<HTMLElement>(".corner-text").forEach((e) => { e.style.color = ""; e.style.opacity = ""; });
         // background loops rest when their beat isn't playing
         const v = active.shot;
         if (v instanceof HTMLVideoElement && v.dataset.loop !== undefined) v.pause();
@@ -243,6 +244,8 @@ export function Projector() {
     // The film leader on load: a countdown with a sweep hand on black, then the portrait develops.
     // Scrolling, PROYECTOR off or reduced motion skip it.
     let leaderStart = -1;
+    // very slow load: if the safety timer already revealed the plain hero, skip the leader and the develop
+    let heroShown = false;
     let leaderDone = reduced || !motion;
     const leaderEl = leaderRef.current;
     const endLeader = (now: number) => {
@@ -255,7 +258,11 @@ export function Projector() {
     const runLeader = (now: number, film: number, y: number) => {
       if (leaderDone) return;
       if (!motion || y > 8) { endLeader(now); return; }
-      if (leaderStart < 0) { leaderStart = film; root.classList.add("countdown-on"); }
+      if (leaderStart < 0) {
+        if (!root.classList.contains("projector-pending")) { heroShown = true; leaderDone = true; return; }
+        leaderStart = film;
+        root.classList.add("countdown-on");
+      }
       const f = film - leaderStart;
       if (f >= CONFIG.leaderFrames) { endLeader(now); return; }
       if (leaderEl) {
@@ -264,11 +271,17 @@ export function Projector() {
         const n = leaderEl.querySelector<HTMLElement>(".countdown-n");
         const num = String(3 - Math.floor(f / FPS));
         if (n && n.textContent !== num) n.textContent = num;
+        // a projected leader: it weaves in the gate (drift + per-frame jitter + a hair of rotation) and the lamp breathes
+        const w = weave({ drift: 2.2, period: 1.4, jitter: 0.9, rot: 0.35, seed: 71 }, film);
+        leaderEl.style.setProperty("--wx", `${w.x.toFixed(2)}px`);
+        leaderEl.style.setProperty("--wy", `${w.y.toFixed(2)}px`);
+        leaderEl.style.setProperty("--wr", `${w.rot.toFixed(3)}deg`);
+        leaderEl.style.setProperty("--wo", (0.84 + Math.random() * 0.16).toFixed(3));
       }
     };
 
     const timerProgress = (s: ShotState, now: number) => {
-      if (!motion) return 1;
+      if (!motion || heroShown) return 1;
       if (s.developStart < 0) return 0; // still behind the leader
       return Math.min(1, Math.max(0, (now - s.developStart) / CONFIG.openingDevelopMs));
     };
@@ -416,12 +429,33 @@ export function Projector() {
             l.style.opacity = String(o);
           });
         } else if (st) {
-          for (const el of st.beat.shots) {
+          // the closing pair develops one card at a time: image 1, then the sentence up out of the safelight red,
+          // then image 2. Each picture only appears when its turn comes, as paper rising out of black.
+          const corner = st.beat.frame.classList.contains("frame--corner");
+          const CORNER = { img2At: 0.42, devLen: 0.32, textAt: 0.26, textLen: 0.16 };
+          if (corner) {
+            const txt = st.beat.frame.querySelector<HTMLElement>(".corner-text");
+            if (txt) {
+              if (!motion) { txt.style.color = ""; txt.style.opacity = ""; }
+              else {
+                const tq = Math.max(0, Math.min(1, (st.q - CORNER.textAt) / CORNER.textLen));
+                const c = [77, 19, 13].map((v, i) => Math.round(v + ([236, 230, 218][i] - v) * tq)); // safelight paper -> Bone
+                txt.style.color = `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+                txt.style.opacity = String(st.q < CORNER.textAt ? 0 : Math.min(1, 0.35 + tq));
+              }
+            }
+          }
+          st.beat.shots.forEach((el, idx) => {
             const sh = shots.find((x) => x.el === el);
-            if (!sh?.tex) continue;
+            if (!sh?.tex) return;
             let develop = st.develop;
             let hold = false;
-            if (sh.timer) { develop = timerProgress(sh, now); hold = motion && (sh.developStart < 0 || now < sh.developStart); }
+            if (corner && motion) {
+              const p = (st.q - (idx === 0 ? 0 : CORNER.img2At)) / CORNER.devLen;
+              if (p <= 0) return; // not its turn yet
+              develop = Math.min(1, p);
+            }
+            if (sh.timer) { develop = timerProgress(sh, now); hold = motion && !heroShown && (sh.developStart < 0 || now < sh.developStart); }
             const v = sh.el;
             if (v instanceof HTMLVideoElement) {
               if (v.dataset.loop !== undefined) {
@@ -433,7 +467,7 @@ export function Projector() {
               }
             }
             if (!hold) push(sh, develop);
-          }
+          });
         }
         // the scene's background motif: fades in over the scene's first 30vh, out with the scene through its rest
         let bg: Parameters<PictureEngine["frame"]>[1] = null;

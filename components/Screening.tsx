@@ -79,7 +79,7 @@ export function Screening() {
                 <div className="caption" data-weave="subtitle"><p className="subtitle subtitle--small">{film.synopsis[0]}</p></div>
               </Frame>
               {/* the closing pair: image 1, the sentence off its corner, image 2 beside the sentence (mirrored in reel 2) */}
-              <Frame beat="picture" hold="normal" className={`frame--corner frame--corner-${side}`}>
+              <Frame beat="picture" hold="long" className={`frame--corner frame--corner-${side}`}>
                 <div className="corner-a"><Window shot={film.lastShot} sizes="(max-width: 809px) 62vw, 24vw" /></div>
                 <p className="subtitle subtitle--small corner-text" data-weave="subtitle">{film.synopsis[1]}</p>
                 <div className="corner-b"><Window shot={film.secondShot} sizes="(max-width: 809px) 62vw, 24vw" /></div>
@@ -88,7 +88,7 @@ export function Screening() {
               <Frame beat="picture" hold="long" className="frame--bleed frame--watch" dim={0.42}>
                 <Picture shot={film.loop} />
                 <div className="frame frame--center watch" style={{ position: "relative", background: "transparent" }}>
-                  <WatchFilm film={film.film} title={film.title} label={t("labels.watch")} />
+                  <WatchFilm film={film.film} title={film.title} label={t("labels.play")} />
                   <a className="label link watch-link" href={film.link.href} rel="noopener" target="_blank">
                     {t("labels.berlinCommercial")} ↗
                   </a>

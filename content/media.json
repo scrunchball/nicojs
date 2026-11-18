@@ -72,12 +72,20 @@
         {
           "id": "wei-loop",
           "kind": "loop",
-          "note": "Watch beat: background loop. In: reel01-videobg (12.6 s, cycling)"
+          "note": "Watch beat: background loop. In: reel01-videobg (12.6 s, cycling)",
+          "size": [
+            1280,
+            534
+          ]
         },
         {
           "id": "wei-film",
           "kind": "film",
-          "note": "The film for the player. For now: reel01-videobg with sound, as a preview until the full film arrives (R2)"
+          "note": "The film for the player. For now: reel01-videobg with sound, as a preview until the full film arrives (R2)",
+          "size": [
+            1920,
+            800
+          ]
         }
       ]
     },
@@ -152,12 +160,20 @@
         {
           "id": "btf-loop",
           "kind": "loop",
-          "note": "Watch beat: background loop. In: reel02-videobg (12.6 s)"
+          "note": "Watch beat: background loop. In: reel02-videobg (12.6 s)",
+          "size": [
+            1280,
+            534
+          ]
         },
         {
           "id": "btf-film",
           "kind": "film",
-          "note": "The film for the player. For now: reel02-videobg with sound, as a preview until the full film arrives (R2)"
+          "note": "The film for the player. For now: reel02-videobg with sound, as a preview until the full film arrives (R2)",
+          "size": [
+            1920,
+            800
+          ]
         }
       ]
     },

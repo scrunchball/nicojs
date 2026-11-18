@@ -78,6 +78,7 @@ export class GrainEngine {
     this.pass = new Pass(this.gl, FRAG);
     this.timer = new GpuTimer(this.gl);
     this.setMaxDpr(maxDpr);
+    this.neutral();
   }
 
   setMaxDpr(maxDpr: number) {
@@ -85,7 +86,16 @@ export class GrainEngine {
     this.resize();
   }
 
-  resize() { fitCanvas(this.gl, this.dpr); }
+  /** Until the plates exist the canvas must be neutral grey: soft-light over black would darken the whole page. */
+  private neutral() {
+    const gl = this.gl;
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    gl.clearColor(0.5, 0.5, 0.5, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+
+  // a resized canvas is wiped to black, which soft-light would turn into a dark flash: neutral grey until the next frame
+  resize() { if (fitCanvas(this.gl, this.dpr)) this.neutral(); }
 
   /** Make one of the 4 densities (0..3). */
   async load(density: number) {

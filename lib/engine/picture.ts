@@ -125,6 +125,9 @@ void main() {
   // Under the safelight you see density only: a dim, red monochrome. Blank paper is the dim red "white";
   // as density builds, shadows darken out of it. Never bright.
   vec3 underSafelight = mix(uPaper, uPaper * L, t);
+  // the safelit paper comes up out of the room's own black over the first frames: fade its opacity, never its
+  // colour towards pure black (that would dip below Gate black for a moment)
+  alpha *= smoothstep(0.0, 0.2, p);
 
   // 5. lights on (75-100%): the true picture rises out of the safelight over the last quarter, never a flash.
   // Dye layers arrive a few percent apart (R ~ cyan density, B ~ yellow) so colour forms rather than fades.

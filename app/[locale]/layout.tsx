@@ -37,6 +37,8 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   return (
     <html lang={locale} suppressHydrationWarning>
+      {/* black from the very first paint, even before the stylesheet arrives (no white flash on slow connections) */}
+      <head><style dangerouslySetInnerHTML={{ __html: "html,body{background:#121110;color:#ece6da}" }} /></head>
       <body>
         {/* Before first paint: if the film engine can run, hold the opening portrait in black (it develops in). */}
         <script dangerouslySetInnerHTML={{ __html: PENDING }} />

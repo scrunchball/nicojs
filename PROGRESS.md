@@ -104,6 +104,9 @@ Not yet / caveats:
 ### Film material (D-72, D-73)
 - Both reels now show Nico's real frames (key + closing pair) and real background loops; the player previews each film's clip with sound until the full films arrive. Checked on desktop and iPhone; no errors.
 
+### Final polish before sharing with Nico (D-74..D-77)
+- PLAY FILM cursor tag + the frame that resizes to the film before it fades in; the closing pair develops card by card; the hero's flash and dark dip fixed; the leader weaves, breathes and glows.
+
 ## Not started
 404 + Impressum/privacy; accessibility + SEO pass (screen reader, metadata, sitemap, social images); launch (domain, R2 for the films, headers, monitoring). Backend (CMS) to be decided., 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 

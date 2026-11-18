@@ -249,16 +249,19 @@ html.film .seq-line { grid-area: 1 / 1; opacity: 0; }
 .projector-grain { transition: opacity 900ms var(--ease-projector); }
 html.watching .projector-grain { opacity: 0; }
 html.watching { overflow: hidden; }
-.player-room { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: rgb(12 11 10 / 0.96);
-  opacity: 0; transition: opacity 500ms var(--ease-projector); }
-.player-room.is-shown { opacity: 1; }
+.player-room { position: fixed; inset: 0; z-index: 80; }
+.player-backdrop { position: absolute; inset: 0; background: rgb(12 11 10 / 0.96); transition: opacity 600ms var(--ease-projector); }
 .player-close { position: absolute; top: var(--s3); right: var(--margin); background: none; border: 0; color: var(--bone); cursor: pointer;
-  font: inherit; letter-spacing: inherit; padding: 8px 0; }
+  font: inherit; letter-spacing: inherit; padding: 8px 0; transition: opacity 400ms var(--ease-projector); z-index: 2; }
 .player-close:hover { color: var(--safelight-text); }
-.player { width: min(90vw, calc((84svh - 88px) * var(--ar))); display: grid; gap: var(--s3); }
-.player-screen { border-radius: 22px; overflow: hidden; background: #000; aspect-ratio: var(--ar); }
-.player-screen video { width: 100%; height: 100%; display: block; object-fit: cover; cursor: pointer; } /* end to end in the rounded container */
-.player-bar { display: flex; align-items: center; justify-content: center; gap: var(--s5); color: var(--bone); padding: var(--s2) 4px 0; }
+/* the frame grows out of the reel container and resizes to the film's own shape, then the film fades in */
+.player-frame { position: absolute; z-index: 1; border-radius: 22px; overflow: hidden; background: #000;
+  transition: left 700ms var(--ease-projector), top 700ms var(--ease-projector), width 700ms var(--ease-projector), height 700ms var(--ease-projector), border-radius 700ms var(--ease-projector); }
+.phase-grow .player-frame, .phase-closing .player-frame { border-radius: var(--box-r); }
+.player-frame video { width: 100%; height: 100%; display: block; object-fit: cover; cursor: pointer; transition: opacity 1100ms var(--ease-projector); }
+.phase-closing .player-frame video { transition-duration: 300ms; }
+.player-bar { position: absolute; left: 0; right: 0; z-index: 2; display: flex; align-items: center; justify-content: center; gap: var(--s5);
+  color: var(--bone); padding: 0 var(--margin); transition: opacity 500ms var(--ease-projector) 200ms; }
 .player-btn { background: none; border: 0; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; padding: 8px 0; display: inline-flex; gap: 6px; align-items: center; }
 .player-btn:hover { color: var(--safelight-text); }
 .player-tc { font-variant-numeric: tabular-nums; }
@@ -270,7 +273,19 @@ html.watching { overflow: hidden; }
 .player-scrub::-moz-range-progress { height: 1px; background: var(--bone); }
 .player-scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 9px; border-radius: 50%; background: var(--safelight-text); margin-top: -4px; }
 .player-scrub::-moz-range-thumb { width: 9px; height: 9px; border: 0; border-radius: 50%; background: var(--safelight-text); }
-@media (max-width: 809px) { .player-bar { flex-wrap: wrap; gap: var(--s2); } .player-scrub { order: 10; flex-basis: 100%; } }
+@media (max-width: 809px) { .player-bar { flex-wrap: wrap; gap: var(--s2) var(--s3); } .player-scrub { order: 10; flex-basis: 100%; } .player-btn { min-height: 44px; } }
+
+/* PLAY FILM: a small Safelight-red tag. With a mouse it follows the cursor over the film; on touch it sits centred */
+.play-tag { background: var(--safelight); color: var(--bone); border: 0; border-radius: 10px; padding: 14px 20px; cursor: pointer;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; white-space: nowrap;
+  transition: opacity 220ms var(--ease-projector), scale 260ms var(--ease-projector); }
+.play-tag.is-cursor { position: fixed; left: 0; top: 0; z-index: 70; pointer-events: none; opacity: 0; scale: 0.6; }
+.play-tag.is-cursor.is-on { opacity: 1; scale: 1; }
+.play-tag.is-cursor:focus-visible { pointer-events: auto; opacity: 1; scale: 1; transform: translate3d(50vw, 50svh, 0) translate(-50%, -50%) !important; }
+.play-tag.is-static { position: relative; }
+.play-tag.is-gone, .play-tag.is-cursor.is-gone { opacity: 0 !important; scale: 0.5 !important; }
+.frame--watch.has-play-cursor, .frame--watch.has-play-cursor * { cursor: none; }
+.frame--watch.has-play-cursor a, .frame--watch.has-play-cursor a * { cursor: pointer; }
 
 /* ---------- Stage 6, round 2 ---------- */
 /* the name carries a little more glow than the other titles */
@@ -351,13 +366,14 @@ html.watching .index { display: none; } /* the player has its own CLOSE */
 .window .pic { border-radius: clamp(4px, 1.1vw, 16px); }
 
 /* ---------- The film leader on load (film mode only) ---------- */
-.countdown { display: none; position: fixed; inset: 0; z-index: 45; pointer-events: none; --a: 0deg; --d: min(52vmin, 460px); }
+.countdown { display: none; position: fixed; inset: 0; z-index: 45; pointer-events: none; --a: 0deg; --d: min(52vmin, 460px);
+  --wx: 0px; --wy: 0px; --wr: 0deg; --wo: 1; opacity: var(--wo); filter: blur(0.6px); }
 html.countdown-on .countdown { display: block; }
 html.countdown-on main { opacity: 0; } /* nothing but the leader until the film starts */
-.countdown > * { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.countdown > * { position: absolute; left: 50%; top: 50%; transform: translate(calc(-50% + var(--wx)), calc(-50% + var(--wy))) rotate(var(--wr)); }
 .countdown-sweep { width: var(--d); height: var(--d); border-radius: 50%;
   background: conic-gradient(from 0deg, rgb(236 230 218 / 0.13) 0deg var(--a), rgb(236 230 218 / 0.03) var(--a) 360deg); }
-.countdown-ring { border-radius: 50%; border: 1px solid rgb(154 148 138 / 0.55); }
+.countdown-ring { border-radius: 50%; border: 1.5px solid rgb(190 182 170 / 0.6); box-shadow: 0 0 14px rgb(236 230 218 / 0.12), inset 0 0 14px rgb(236 230 218 / 0.08); }
 .countdown-ring--outer { width: var(--d); height: var(--d); }
 .countdown-ring--inner { width: calc(var(--d) * 0.78); height: calc(var(--d) * 0.78); }
 .countdown-cross { width: calc(var(--d) * 1.5); height: calc(var(--d) * 1.1);
@@ -366,8 +382,13 @@ html.countdown-on main { opacity: 0; } /* nothing but the leader until the film 
     linear-gradient(rgb(154 148 138 / 0.45), rgb(154 148 138 / 0.45)) center / 1px 100% no-repeat; }
 .countdown-n { font-family: var(--font-serif); font-size: calc(var(--d) * 0.5); line-height: 1; color: var(--bone);
   -webkit-mask-image: radial-gradient(ellipse at center, #000 50%, rgb(0 0 0 / 0.8) 100%); mask-image: radial-gradient(ellipse at center, #000 50%, rgb(0 0 0 / 0.8) 100%);
-  text-shadow: 0 0 22px rgb(236 230 218 / 0.12); }
+  text-shadow: 0 0 28px rgb(236 230 218 / 0.35), 0 0 6px rgb(236 230 218 / 0.25); }
 /* until the engine is ready, the name stays hidden too (it prints in on scroll) */
 html.projector-pending .name { opacity: 0; }
 /* the watch loop sits dimmed behind its button, also before the engine takes it over */
 .frame--watch > .pic { filter: brightness(0.42); }
+
+/* the hero's plain picture never shows in film mode before the canvas has it (no flash at the end of the leader) */
+html.film .pic[data-develop="timer"]:not([data-ready]) { opacity: 0 !important; }
+/* the closing pair reveals its pictures one by one on the canvas; their plain versions never jump the queue */
+html.film .frame--corner .pic:not([data-ready]) { opacity: 0 !important; }
