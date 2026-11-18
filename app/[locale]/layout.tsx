@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { NextIntlClientProvider } from "next-intl";
-import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import "@fontsource/instrument-serif/latin-400.css";
@@ -10,8 +9,11 @@ import "@fontsource/instrument-serif/latin-400-italic.css";
 import "@fontsource/instrument-serif/latin-ext-400-italic.css";
 import "@fontsource/courier-prime/latin-400.css";
 import "@fontsource/courier-prime/latin-700.css";
+import "lenis/dist/lenis.css";
 import "@/styles/tokens.css";
 import "@/styles/globals.css";
+
+const PENDING = `(function(){var d=document.documentElement;if(window.WebGL2RenderingContext&&!matchMedia('(prefers-reduced-motion: reduce)').matches){d.classList.add('projector-pending');setTimeout(function(){d.classList.remove('projector-pending')},6000)}})()`;
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -33,11 +35,14 @@ export default async function LocaleLayout({
   const { locale } = await params;
   if (!routing.locales.includes(locale as never)) notFound();
   setRequestLocale(locale);
-  const messages = await getMessages();
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
+      {/* black from the very first paint, even before the stylesheet arrives (no white flash on slow connections) */}
+      <head><style dangerouslySetInnerHTML={{ __html: "html,body{background:#121110;color:#ece6da}" }} /></head>
       <body>
-        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        {/* Before first paint: if the film engine can run, hold the opening portrait in black (it develops in). */}
+        <script dangerouslySetInnerHTML={{ __html: PENDING }} />
+        {children}
       </body>
     </html>
   );

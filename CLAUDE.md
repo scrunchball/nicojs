@@ -18,4 +18,6 @@ Front-end first, backend later (see `DECISIONS.md` D-02). Content lives in `cont
 
 ## Commands
 - `npm run build` static export to `out/`
-- `npm run typecheck`
+- `npx tsc --noEmit --incremental false` (the incremental cache has given false passes)
+- `python3 scripts/encode-media.py` after adding frames (WebP sizes + previews)
+- Tests on this container's software GPU need `?engine=force` (otherwise the engine stands down, D-60)

@@ -1,0 +1,267 @@
+{
+  "_readme": "Every picture and clip the site shows. Replace a placeholder by dropping a file with the SAME name into public/media/<folder>/. See docs/MEDIA.md.",
+  "folders": {
+    "what-else-is-there": {
+      "label": "What Else is There? (Super 16, 1.66:1)",
+      "size": [
+        1920,
+        1158
+      ],
+      "palette": [
+        [
+          214,
+          178,
+          128
+        ],
+        [
+          92,
+          118,
+          132
+        ],
+        [
+          46,
+          38,
+          28
+        ]
+      ],
+      "shots": [
+        {
+          "id": "wei-01",
+          "kind": "image",
+          "note": "Key image, full-bleed, with the first line of the synopsis. In: two women in the field (image03)",
+          "size": [
+            2560,
+            993
+          ],
+          "focal": [
+            0.53,
+            0.48
+          ]
+        },
+        {
+          "id": "wei-02",
+          "kind": "image",
+          "note": "Opening: large window, right"
+        },
+        {
+          "id": "wei-05",
+          "kind": "image",
+          "note": "Closing pair, image 1 (the sentence sits off its corner). In: close-up by the water (image01)",
+          "size": [
+            2560,
+            1322
+          ],
+          "focal": [
+            0.45,
+            0.42
+          ]
+        },
+        {
+          "id": "wei-06",
+          "kind": "image",
+          "note": "Closing pair, image 2. In: reading under the tree (image02)",
+          "size": [
+            2094,
+            1394
+          ],
+          "focal": [
+            0.45,
+            0.4
+          ]
+        },
+        {
+          "id": "wei-loop",
+          "kind": "loop",
+          "note": "Watch beat: background loop. In: reel01-videobg (12.6 s, cycling)",
+          "size": [
+            1280,
+            534
+          ]
+        },
+        {
+          "id": "wei-film",
+          "kind": "film",
+          "note": "The full film (3:37, letterbox cropped to 2.57:1), streamed from R2: 1080p for desktop, 720p for phones",
+          "size": [
+            1920,
+            748
+          ],
+          "url": "https://pub-54ce44e4126944899cfbb4c683fd43f6.r2.dev/films/what-else-is-there-1080.mp4",
+          "sd": "https://pub-54ce44e4126944899cfbb4c683fd43f6.r2.dev/films/what-else-is-there-720.mp4"
+        }
+      ]
+    },
+    "by-the-fire": {
+      "label": "By the Fire (16mm, 1.37:1)",
+      "size": [
+        1920,
+        1402
+      ],
+      "palette": [
+        [
+          196,
+          92,
+          40
+        ],
+        [
+          58,
+          52,
+          44
+        ],
+        [
+          18,
+          14,
+          12
+        ]
+      ],
+      "shots": [
+        {
+          "id": "btf-01",
+          "kind": "image",
+          "note": "Key image, full-bleed, with the first line of the synopsis. In: arms open in the sunflowers (image03)",
+          "size": [
+            2560,
+            1168
+          ],
+          "focal": [
+            0.53,
+            0.42
+          ]
+        },
+        {
+          "id": "btf-02",
+          "kind": "image",
+          "note": "Opening: small window, left"
+        },
+        {
+          "id": "btf-05",
+          "kind": "image",
+          "note": "Closing pair, image 1 (the sentence sits off its corner). In: covered head at the desk in the field (image01)",
+          "size": [
+            2560,
+            1760
+          ],
+          "focal": [
+            0.4,
+            0.5
+          ]
+        },
+        {
+          "id": "btf-06",
+          "kind": "image",
+          "note": "Closing pair, image 2. In: three at the fire (image02)",
+          "size": [
+            2560,
+            1740
+          ],
+          "focal": [
+            0.5,
+            0.6
+          ]
+        },
+        {
+          "id": "btf-loop",
+          "kind": "loop",
+          "note": "Watch beat: background loop. In: reel02-videobg (12.6 s)",
+          "size": [
+            1280,
+            534
+          ]
+        },
+        {
+          "id": "btf-film",
+          "kind": "film",
+          "note": "The full film (3:45, 16:9), streamed from R2: 1080p for desktop, 720p for phones",
+          "size": [
+            1920,
+            1080
+          ],
+          "url": "https://pub-54ce44e4126944899cfbb4c683fd43f6.r2.dev/films/by-the-fire-1080.mp4",
+          "sd": "https://pub-54ce44e4126944899cfbb4c683fd43f6.r2.dev/films/by-the-fire-720.mp4"
+        }
+      ]
+    },
+    "portraits": {
+      "label": "Portraits of Nico",
+      "size": [
+        2400,
+        1600
+      ],
+      "palette": [
+        [
+          150,
+          140,
+          128
+        ],
+        [
+          70,
+          64,
+          58
+        ],
+        [
+          20,
+          18,
+          16
+        ]
+      ],
+      "shots": [
+        {
+          "id": "portrait-01",
+          "kind": "image",
+          "note": "Opening portrait (hero), full-bleed. Close-up, 5:4",
+          "size": [
+            1920,
+            1536
+          ],
+          "focal": [
+            0.57,
+            0.42
+          ]
+        },
+        {
+          "id": "portrait-02",
+          "kind": "image",
+          "note": "Behind the camera, 1st picture (bio lines 1-2). Reading in the director's chair, 5:4",
+          "size": [
+            1500,
+            1200
+          ],
+          "focal": [
+            0.48,
+            0.68
+          ]
+        },
+        {
+          "id": "portrait-03",
+          "kind": "image",
+          "note": "Behind the camera, 2nd picture (bio lines 3-4). Standing by the director's chair, 3:2",
+          "size": [
+            1920,
+            1280
+          ],
+          "focal": [
+            0.5,
+            0.42
+          ]
+        }
+      ]
+    }
+  },
+  "laurels": {
+    "_note": "Festival laurels beside each award in the Festival circuit roll. SVG or transparent PNG. Placeholders are SVG; tell Claude if a real one is PNG.",
+    "what-else-is-there": [
+      "wei-1",
+      "wei-2",
+      "wei-3",
+      "wei-4",
+      "wei-5"
+    ],
+    "by-the-fire": [
+      "btf-1",
+      "btf-2",
+      "btf-3",
+      "btf-4"
+    ]
+  },
+  "_r2": "Full films stream from Cloudflare R2 (bucket nicojs-media, public URL below). Upload new encodes there; see docs/MEDIA.md."
+}
