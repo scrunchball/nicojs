@@ -28,7 +28,15 @@
         {
           "id": "wei-01",
           "kind": "image",
-          "note": "Key image, full-bleed, with the first line of the synopsis"
+          "note": "Key image, full-bleed, with the first line of the synopsis. In: two women in the field (image03)",
+          "size": [
+            2560,
+            993
+          ],
+          "focal": [
+            0.53,
+            0.48
+          ]
         },
         {
           "id": "wei-02",
@@ -38,22 +46,38 @@
         {
           "id": "wei-05",
           "kind": "image",
-          "note": "Image 1 of the closing pair (the second sentence sits off its corner)"
+          "note": "Closing pair, image 1 (the sentence sits off its corner). In: close-up by the water (image01)",
+          "size": [
+            2560,
+            1322
+          ],
+          "focal": [
+            0.45,
+            0.42
+          ]
         },
         {
           "id": "wei-06",
           "kind": "image",
-          "note": "Image 2 of the closing pair (beside the second sentence)"
+          "note": "Closing pair, image 2. In: reading under the tree (image02)",
+          "size": [
+            2094,
+            1394
+          ],
+          "focal": [
+            0.45,
+            0.4
+          ]
         },
         {
           "id": "wei-loop",
           "kind": "loop",
-          "note": "Watch beat: short background loop (6-10 s, no text)"
+          "note": "Watch beat: background loop. In: reel01-videobg (12.6 s, cycling)"
         },
         {
           "id": "wei-film",
           "kind": "film",
-          "note": "The film (or trailer) for the custom player. Full films need video hosting (backend phase)"
+          "note": "The film for the player. For now: reel01-videobg with sound, as a preview until the full film arrives (R2)"
         }
       ]
     },
@@ -84,7 +108,15 @@
         {
           "id": "btf-01",
           "kind": "image",
-          "note": "Key image, full-bleed, with the first line of the synopsis"
+          "note": "Key image, full-bleed, with the first line of the synopsis. In: arms open in the sunflowers (image03)",
+          "size": [
+            2560,
+            1168
+          ],
+          "focal": [
+            0.53,
+            0.42
+          ]
         },
         {
           "id": "btf-02",
@@ -94,22 +126,38 @@
         {
           "id": "btf-05",
           "kind": "image",
-          "note": "Image 1 of the closing pair (the second sentence sits off its corner)"
+          "note": "Closing pair, image 1 (the sentence sits off its corner). In: covered head at the desk in the field (image01)",
+          "size": [
+            2560,
+            1760
+          ],
+          "focal": [
+            0.4,
+            0.5
+          ]
         },
         {
           "id": "btf-06",
           "kind": "image",
-          "note": "Image 2 of the closing pair (beside the second sentence)"
+          "note": "Closing pair, image 2. In: three at the fire (image02)",
+          "size": [
+            2560,
+            1740
+          ],
+          "focal": [
+            0.5,
+            0.6
+          ]
         },
         {
           "id": "btf-loop",
           "kind": "loop",
-          "note": "Watch beat: short background loop (6-10 s, no text)"
+          "note": "Watch beat: background loop. In: reel02-videobg (12.6 s)"
         },
         {
           "id": "btf-film",
           "kind": "film",
-          "note": "The film (or trailer) for the custom player. Full films need video hosting (backend phase)"
+          "note": "The film for the player. For now: reel02-videobg with sound, as a preview until the full film arrives (R2)"
         }
       ]
     },

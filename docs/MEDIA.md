@@ -37,6 +37,12 @@ Laurels: SVG or transparent PNG. If one is a PNG, send it to Claude (the path ch
 (free up to 10 GB, serves MP4 with seeking); the player then points at the R2 URL. Send the masters to Claude
 for a 1080p web encode (H.264, ~6 Mbps, AAC audio).
 
+## Delivered so far
+- Portraits: the close-up (hero), reading in the director's chair, standing by the director's chair.
+- What Else is There?: key = two women in the field; pair = close-up by the water, reading under the tree; loop = the cycling clip.
+- By the Fire: key = arms open in the sunflowers; pair = covered head at the desk in the field, three at the fire; loop = the flower/eye clip.
+- Still to come: the opening's two windows (wei-02, btf-02), the full films (for R2), laurels, more portraits (optional).
+
 ## Focal points
 Each picture can have `"focal": [x, y]` in `content/media.json` (0..1 from the top-left): where the subject is. Crops keep it in frame, which matters most on portrait phones.
 

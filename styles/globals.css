@@ -369,3 +369,5 @@ html.countdown-on main { opacity: 0; } /* nothing but the leader until the film 
   text-shadow: 0 0 22px rgb(236 230 218 / 0.12); }
 /* until the engine is ready, the name stays hidden too (it prints in on scroll) */
 html.projector-pending .name { opacity: 0; }
+/* the watch loop sits dimmed behind its button, also before the engine takes it over */
+.frame--watch > .pic { filter: brightness(0.42); }

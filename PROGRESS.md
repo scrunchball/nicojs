@@ -101,6 +101,9 @@ Not yet / caveats:
 ### More of Adam's direction (D-68..D-71)
 - Projector flicker over the whole site (random, ambient, flash-safe); "next." sinks into the safelight red; rounded corners on every picture but the hero; the film leader on load, then the hero develops and the name prints in on scroll.
 
+### Film material (D-72, D-73)
+- Both reels now show Nico's real frames (key + closing pair) and real background loops; the player previews each film's clip with sound until the full films arrive. Checked on desktop and iPhone; no errors.
+
 ## Not started
 404 + Impressum/privacy; accessibility + SEO pass (screen reader, metadata, sitemap, social images); launch (domain, R2 for the films, headers, monitoring). Backend (CMS) to be decided., 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 
