@@ -110,6 +110,12 @@ function PlayerRoom({ film, title, from, onClose }: { film: Shot; title: string;
   const [d, setD] = useState(0);
   const [muted, setMuted] = useState(false);
   const [ar, setAr] = useState(film.width / film.height);
+  // phones and data saver get the lighter stream; everyone else the full-quality one
+  const [src] = useState(() => {
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    const small = innerWidth < 810 || !!conn?.saveData;
+    return small && film.sd ? film.sd : film.loop;
+  });
   const [vp, setVp] = useState({ w: typeof window !== "undefined" ? innerWidth : 1280, h: typeof window !== "undefined" ? innerHeight : 800 });
 
   // the film's own shape, as large as fits with room for the controls
@@ -177,7 +183,7 @@ function PlayerRoom({ film, title, from, onClose }: { film: Shot; title: string;
       <div className="player-frame" style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }}>
         <video
           ref={video}
-          src={film.loop}
+          src={src}
           poster={film.src}
           playsInline
           preload="auto"

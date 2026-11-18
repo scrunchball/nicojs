@@ -15,9 +15,11 @@ export type Shot = {
   kind: "image" | "clip" | "loop" | "film";
   /** Image (or clip poster) under /public. */
   src: string;
-  /** Clips only: loop encode and all-intra scrub encode. */
+  /** Clips only: loop encode and all-intra scrub encode. Films: the full-quality stream (R2). */
   loop?: string;
   scrub?: string;
+  /** Films: a lighter stream for phones and data saver (R2). */
+  sd?: string;
   width: number;
   height: number;
   /** Where the picture's subject is (0..1 from the top-left); crops keep it in frame. */
@@ -60,7 +62,7 @@ export type Film = {
 };
 
 /* ---------- media: content/media.json is the single list of files (see docs/MEDIA.md) ---------- */
-type MediaShot = { id: string; kind: Shot["kind"]; size?: [number, number]; focal?: [number, number] };
+type MediaShot = { id: string; kind: Shot["kind"]; size?: [number, number]; focal?: [number, number]; url?: string; sd?: string };
 const folders = (media as unknown as { folders: Record<string, { size: [number, number]; shots: MediaShot[] }> }).folders;
 
 function shot(folder: string, id: string, alt: string, composition: Composition, side?: "left" | "right"): Shot {
@@ -74,7 +76,8 @@ function shot(folder: string, id: string, alt: string, composition: Composition,
     id, kind: m.kind, src: `${base}.jpg`, width, height, alt, composition, side, ...(m.focal ? { focal: m.focal } : {}),
     ...(v ? { srcSet: v.w.map((w) => `${base}-${w}.webp ${w}w`).join(", "), lqip: v.lqip } : {}),
     ...(m.kind === "clip" ? { loop: `${base}.mp4`, scrub: `${base}-scrub.mp4` } : {}),
-    ...(m.kind === "loop" || m.kind === "film" ? { loop: `${base}.mp4` } : {}),
+    ...(m.kind === "loop" || m.kind === "film" ? { loop: m.url ?? `${base}.mp4` } : {}),
+    ...(m.sd ? { sd: m.sd } : {}),
   };
 }
 

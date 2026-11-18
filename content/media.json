@@ -81,11 +81,13 @@
         {
           "id": "wei-film",
           "kind": "film",
-          "note": "The film for the player. For now: reel01-videobg with sound, as a preview until the full film arrives (R2)",
+          "note": "The full film (3:37, letterbox cropped to 2.57:1), streamed from R2: 1080p for desktop, 720p for phones",
           "size": [
             1920,
-            800
-          ]
+            748
+          ],
+          "url": "https://pub-54ce44e4126944899cfbb4c683fd43f6.r2.dev/films/what-else-is-there-1080.mp4",
+          "sd": "https://pub-54ce44e4126944899cfbb4c683fd43f6.r2.dev/films/what-else-is-there-720.mp4"
         }
       ]
     },
@@ -169,11 +171,13 @@
         {
           "id": "btf-film",
           "kind": "film",
-          "note": "The film for the player. For now: reel02-videobg with sound, as a preview until the full film arrives (R2)",
+          "note": "The full film (3:45, 16:9), streamed from R2: 1080p for desktop, 720p for phones",
           "size": [
             1920,
-            800
-          ]
+            1080
+          ],
+          "url": "https://pub-54ce44e4126944899cfbb4c683fd43f6.r2.dev/films/by-the-fire-1080.mp4",
+          "sd": "https://pub-54ce44e4126944899cfbb4c683fd43f6.r2.dev/films/by-the-fire-720.mp4"
         }
       ]
     },
@@ -258,5 +262,6 @@
       "btf-3",
       "btf-4"
     ]
-  }
+  },
+  "_r2": "Full films stream from Cloudflare R2 (bucket nicojs-media, public URL below). Upload new encodes there; see docs/MEDIA.md."
 }

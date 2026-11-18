@@ -107,6 +107,9 @@ Not yet / caveats:
 ### Final polish before sharing with Nico (D-74..D-77)
 - PLAY FILM cursor tag + the frame that resizes to the film before it fades in; the closing pair develops card by card; the hero's flash and dark dip fixed; the leader weaves, breathes and glows.
 
+### Full films on R2 (D-78)
+- Both films encoded (1080p + 720p) and uploaded to R2; the player streams them: desktop 1080p, phones 720p. Checked: full length, correct shape, seeking to 2:00 works, no errors.
+
 ## Not started
 404 + Impressum/privacy; accessibility + SEO pass (screen reader, metadata, sitemap, social images); launch (domain, R2 for the films, headers, monitoring). Backend (CMS) to be decided., 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 
