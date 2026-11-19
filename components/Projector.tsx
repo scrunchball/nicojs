@@ -112,7 +112,6 @@ export function Projector() {
     const autoBtn = document.querySelector<HTMLButtonElement>("[data-autoplay]");
     const progEl = document.querySelector<HTMLElement>("[data-progress]");
     let auto = false, autoY = 0, lastAutoNow = -1;
-    let cueGone = false; // the scroll cue disappears for good once the film has moved
     let lightNow = "";
     // how light the hero is behind the top and bottom bars, for the crop actually on screen (cached per size)
     type Bands = { tl: number; tr: number; bl: number; br: number; bc: number };
@@ -158,7 +157,6 @@ export function Projector() {
       lastAutoNow = -1;
       autoBtn?.setAttribute("aria-pressed", String(on));
       root.classList.toggle("autoplay", on);
-      if (on) cueGone = true;
     };
 
     const tcEl = document.querySelector<HTMLElement>("[data-timecode]");
@@ -435,9 +433,9 @@ export function Projector() {
         const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
         if (progEl) progEl.style.transform = `scaleX(${Math.min(1, y / max).toFixed(4)})`;
       }
-      // the scroll cue: on the hero once the film has started, until the first scroll (or play)
-      if (y > 8) cueGone = true;
-      root.classList.toggle("cue-on", !cueGone && leaderDone && !!st && st.beat.index === 0);
+      // the scroll cue: at the very top of the page (first 4 px) once the film has started; it hides as soon as the
+      // visitor scrolls or plays, and comes back whenever they return to the top
+      root.classList.toggle("cue-on", y <= 4 && !auto && leaderDone && !!st && st.beat.index === 0);
       // each bar reads in dark ink where the developed hero behind it is light (sampled), Bone everywhere else
       const hero = shots.find((x) => x.timer);
       const heroUp = !!st && st.beat.index === 0 && !!hero?.drawn && (heroShown || !motion || timerProgress(hero, now) > 0.72) && st.fade > 0.5;

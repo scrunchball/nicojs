@@ -84,6 +84,28 @@ export function Screening() {
                 <p className="subtitle subtitle--small corner-text" data-weave="subtitle">{film.synopsis[1]}</p>
                 <div className="corner-b"><Window shot={film.secondShot} sizes="(max-width: 809px) 62vw, 24vw" /></div>
               </Frame>
+              {/* the film's festival circuit, inside its reel: the heading prints in, then the awards roll through the box */}
+              <Frame beat="roll" hold="roll" className="frame--roll">
+                <p className="title roll-title" data-weave="title" data-build="print" data-frames="14">Festival <em>circuit</em></p>
+                <div className="roll-box" data-roll-box>
+                  <ul className="roll-list" data-roll aria-label={`${film.title}: festivals and awards`}>
+                    {film.recognition.map((r) => (
+                      <li className="roll-item" key={`${r.kind}-${r.festival}`}>
+                        {r.laurel ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img className="laurel" src={r.laurel} alt="" width={72} height={72} loading="lazy" decoding="async" />
+                        ) : <span className="laurel" />}
+                        <span className="leader" aria-hidden="true" />
+                        <div className="roll-text">
+                          <p className="label silver">{r.kind.toUpperCase()}</p>
+                          <p className="festival">{r.festival}</p>
+                          {(r.year || r.note) && <p className="body silver">{[r.year, r.note].filter(Boolean).join(" · ")}</p>}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Frame>
               {/* watch: a quiet loop of the film behind, and the player on demand */}
               <Frame beat="picture" hold="long" className="frame--bleed frame--watch" dim={0.42}>
                 <Picture shot={film.loop} />
@@ -96,37 +118,7 @@ export function Screening() {
         })}
       </div>
 
-      {/* 5. Festival circuit: the film's title holds at the top; its awards roll up through a box below it */}
-      <section className="scene" data-scene="circuit" aria-labelledby="circuit">
-        <Frame beat="text" hold="t-long" className="frame--rest frame--center">
-          <h2 id="circuit" className="intertitle" data-weave="title" data-build="print" data-frames="14">Festival <em>circuit</em></h2>
-        </Frame>
-        {films.map((film) => (
-          <Frame beat="roll" hold="roll" className="frame--roll" key={film.slug}>
-            <p className="title roll-title" data-weave="title">{film.title}</p>
-            <div className="roll-box" data-roll-box>
-              <ul className="roll-list" data-roll>
-                {film.recognition.map((r) => (
-                  <li className="roll-item" key={`${r.kind}-${r.festival}`}>
-                    {r.laurel ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img className="laurel" src={r.laurel} alt="" width={72} height={72} loading="lazy" decoding="async" />
-                    ) : <span className="laurel" />}
-                    <span className="leader" aria-hidden="true" />
-                    <div className="roll-text">
-                      <p className="label silver">{r.kind.toUpperCase()}</p>
-                      <p className="festival">{r.festival}</p>
-                      {(r.year || r.note) && <p className="body silver">{[r.year, r.note].filter(Boolean).join(" · ")}</p>}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Frame>
-        ))}
-      </section>
-
-      {/* 6. Behind the camera: one picture, centred; a rolling shutter brings in the next, which develops, line by line */}
+      {/* 5. Behind the camera: one picture, centred; a rolling shutter brings in the next, which develops, line by line */}
       <section id="about" className="scene" data-scene="about" aria-label="About" data-rest="40">
         <Frame beat="seq" hold="seq" n={site.bio.length} className="frame--seq">
           <div className="seq-window window window--small">
@@ -142,7 +134,7 @@ export function Screening() {
         </Frame>
       </section>
 
-      {/* 7. End title: cut to red; "Let's / make / the / next one." one word per beat; the email is the last screen */}
+      {/* 6. End title: cut to red; "Let's / make / the / next one." one word per beat; the email is the last screen */}
       <section id="contact" className="scene" data-scene="end" aria-label="Contact" data-rest="0">
         <Frame beat="text" hold="t-five" className="frame--red frame--center">
           <p className="title end-title" data-weave="title" data-build="words">

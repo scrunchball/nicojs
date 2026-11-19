@@ -61,7 +61,10 @@ export function Chrome({ locale }: { locale: string }) {
         <span className="tc-bar" aria-hidden="true"><i data-progress /></span>
       </div>
       {/* a long thin line on the hero that invites the first scroll; gone for good once the film moves */}
-      <div className="scroll-cue" aria-hidden="true"><i /></div>
+      <div className="scroll-cue" aria-hidden="true">
+        <span className="scroll-cue-line"><i /></span>
+        <span className="scroll-cue-label label">{t("scrollDown")}</span>
+      </div>
       <div className="chrome chrome-controls label">
         {/* Static without the film engine; a real motion toggle once the Projector runs (WCAG 2.2.2). */}
         <span className="projector-static" aria-hidden="true">{t("markers.projector")} <i>●</i></span>
