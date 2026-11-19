@@ -590,7 +590,7 @@ A portrait develops in a small window → the bio, one sentence per beat on the 
 
 7
 End title
-Cut to red → "Let's make the next one." in 3 beats → the email on its own beat (njs@dizsiplin.org, as it stands; see Open decisions) → fade → FIN alone on black
+Cut to red → "Let's make the next one." in 3 beats → the email on its own beat (njs@disziplin.org, as it stands; see Open decisions) → fade → FIN alone on black
 
 Film pages (/en/films/what-else-is-there and so on): a calm, shorter screening of their own, in the same beat language: title → year and format → the synopsis a sentence at a time → the shots in alternating windows → the trailer (a Vimeo or YouTube embed, loaded only on click, borderless on black) → the credits (role and name, one pair per line, generously spaced) → the full festival list for that film, generously spaced → the small poster → the watch links. Each page gets its own social image (a clean still with the title).
 Other routes
@@ -934,7 +934,7 @@ Accent: Safelight red #E8441E, or the current #FF5A1F (more orange, slightly hig
 
 Spanish markers (ROLLO, FIN, PROYECTOR, ÍNDICE) in every language: yes or no?
 
-Email: the site uses njs@dizsiplin.org, while the company is spelled "Disziplin" elsewhere. Confirm the address works before launch.
+Email: the site uses njs@disziplin.org, while the company is spelled "Disziplin" elsewhere. Confirm the address works before launch.
 
 Nico's sign-off on the meta description and on the look after Stage 3.
 

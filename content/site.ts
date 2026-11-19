@@ -84,7 +84,7 @@ function shot(folder: string, id: string, alt: string, composition: Composition,
 export const site = {
   name: "Nicolás J. Scatamacchia",
   nameMark: "Nicolás J. Scatamacchia",
-  email: "njs@dizsiplin.org",
+  email: "njs@disziplin.org",
   tagline: "Berlin-based director making films about hope and beauty.",
   /** One phrase per beat; the last phrase's final word is set in italic. */
   statement: [
@@ -162,6 +162,6 @@ export const portraits = {
 
 /** The opening's two film shots: film 1 large right, film 2 small left. */
 export const openingShots = [
-  { ...shot("what-else-is-there", "wei-02", "Frame from What Else is There?", "large-window", "right"), id: "open-wei-02" },
-  { ...shot("by-the-fire", "btf-02", "Frame from By the Fire", "small-window", "left"), id: "open-btf-02" },
+  { ...shot("what-else-is-there", "wei-02", "On set, behind the scenes", "large-window", "right"), id: "open-wei-02" },
+  { ...shot("by-the-fire", "btf-02", "On set, behind the scenes", "small-window", "left"), id: "open-btf-02" },
 ];

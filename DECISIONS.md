@@ -8,7 +8,7 @@
 | D-04 | Content in `content/site.ts`, typed like the Payload collections | A CMS can replace the file without touching components |
 | D-05 | Accent = deep red `#C42A1A` (`--safelight`), chosen by Adam. A lighter tint `#E8441E` (`--safelight-text`) is used only for small red text on black | Deep red is 3.3:1 on Gate black (fails AA for small text). Bone on `#C42A1A` is 4.58:1 (passes) |
 | D-06 | Spanish markers are translated: ROLLO/ROLLE/REEL, FIN/ENDE/END, PROYECTOR/PROJEKTOR/PROJECTOR, ÍNDICE/INDEX | Adam's choice (differs from the brief's default) |
-| D-07 | Contact email `njs@dizsiplin.org` | Adam confirmed. The Pages file had the placeholder `example@example.com` |
+| D-07 | Contact email `njs@disziplin.org` (spelling corrected by Adam, 19 Nov; was `dizsiplin`) | Adam confirmed. The Pages file had the placeholder `example@example.com` |
 | D-08 | Opening tagline = "Berlin-based director making films about hope and beauty."; the statement = the other three sentences of Nico's description, one per beat, "next" italic | The brief doesn't say how to split Nico's description. All words are verbatim |
 | D-09 | Fonts self-hosted via `@fontsource` (Instrument Serif, Courier Prime) instead of `next/font/google` | No third-party requests; builds offline |
 | D-10 | Placeholders (flat Picture black) stand in for all pictures | Nico's frames, portraits and scans haven't arrived |
@@ -91,3 +91,4 @@
 | D-87 | The Festival circuit lives inside each film's section (before its watch beat), in the reel container: "Festival circuit" prints in letter by letter where the film title used to sit, then the awards roll through a smaller box (56px laurels, smaller type). The standalone Festival circuit scene is gone | Adam's direction |
 | D-88 | Scroll cue: a viewfinder scale (small ticks all the way down the thin line), the rolling light carries a short crossbar, and "SCROLL DOWN" (translated) sits beneath. It shows only at the very top of the page (first 4 px) and comes back whenever the visitor returns to the top; hidden while playing | Adam's direction (replaces "gone for good", D-85) |
 | D-89 | Festival roll inside the reels runs wide (up to 1080px, inside the reel container): every festival line stays on one line and the dot leaders run longer. Phones keep the narrower wrap so long names stay readable | Adam's direction |
+| D-90 | Opening windows use the behind-the-scenes photos (image01 large right, image02 small left), alt "On set, behind the scenes"; reel 1 key image replaced (clapperboard by the water). Email corrected to njs@disziplin.org | Adam delivered / corrected, 19 Nov |
