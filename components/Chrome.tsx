@@ -51,9 +51,17 @@ export function Chrome({ locale }: { locale: string }) {
           </ul>
         </div>
       </details>
-      <div className="chrome chrome-timecode label" aria-hidden="true">
-        <span data-timecode>00:00:00:00</span>
+      {/* the projector line: play the whole film at film speed (1 s of timecode per second), with its progress */}
+      <div className="chrome chrome-timecode label">
+        <button type="button" className="tc-play" data-autoplay aria-pressed="false" aria-label={t("playFilm")}>
+          <svg className="tc-icon tc-icon--play" width="9" height="10" viewBox="0 0 12 14" aria-hidden="true"><path d="M2.2 1.9 L10.4 7 L2.2 12.1 Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
+          <svg className="tc-icon tc-icon--pause" width="9" height="10" viewBox="0 0 12 14" aria-hidden="true"><rect x="2.4" y="2" width="2.4" height="10" rx="1" fill="currentColor" /><rect x="7.2" y="2" width="2.4" height="10" rx="1" fill="currentColor" /></svg>
+        </button>
+        <span data-timecode aria-hidden="true">00:00:00:00</span>
+        <span className="tc-bar" aria-hidden="true"><i data-progress /></span>
       </div>
+      {/* a long thin line on the hero that invites the first scroll; gone for good once the film moves */}
+      <div className="scroll-cue" aria-hidden="true"><i /></div>
       <div className="chrome chrome-controls label">
         {/* Static without the film engine; a real motion toggle once the Projector runs (WCAG 2.2.2). */}
         <span className="projector-static" aria-hidden="true">{t("markers.projector")} <i>●</i></span>

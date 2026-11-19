@@ -39,6 +39,24 @@ function PauseIcon({ size = 12 }: { size?: number }) {
   );
 }
 
+function VolumeIcon({ level }: { level: number }) {
+  return (
+    <svg width="14" height="12" viewBox="0 0 16 14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round">
+      <path d="M1.5 5h2.8L8 2v10L4.3 9H1.5z" />
+      {level > 0 && <path d="M10.5 4.6a3.4 3.4 0 0 1 0 4.8" />}
+      {level > 0.5 && <path d="M12.6 2.6a6.2 6.2 0 0 1 0 8.8" />}
+      {level === 0 && <path d="M11 5l3.4 4M14.4 5L11 9" />}
+    </svg>
+  );
+}
+function FullIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1.5 5V1.5H5M9 1.5h3.5V5M12.5 9v3.5H9M5 12.5H1.5V9" />
+    </svg>
+  );
+}
+
 // the pointer's last position on the page, so the tag can start right under it
 const pointer = { x: -1, y: -1 };
 if (typeof window !== "undefined") {
@@ -173,7 +191,9 @@ function PlayerRoom({ film, title, revealed, onClose }: { film: Shot; title: str
   const [playing, setPlaying] = useState(false);
   const [t, setT] = useState(0);
   const [d, setD] = useState(0);
-  const [muted, setMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const lastVolume = useRef(1);
+  const room = useRef<HTMLDivElement>(null);
   const [ar, setAr] = useState(film.width / film.height);
   // phones and data saver get the lighter stream; everyone else the full-quality one
   const [src] = useState(() => {
@@ -209,7 +229,24 @@ function PlayerRoom({ film, title, revealed, onClose }: { film: Shot; title: str
     if (!v) return;
     if (v.paused) v.play().catch(() => {}); else v.pause();
   }, []);
-  const close = useCallback(() => { video.current?.pause(); onClose(); }, [onClose]);
+  const close = useCallback(() => {
+    video.current?.pause();
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    onClose();
+  }, [onClose]);
+  const setVol = useCallback((v: number) => {
+    const el = video.current;
+    setVolume(v);
+    if (v > 0) lastVolume.current = v;
+    if (el) { el.volume = v; el.muted = v === 0; }
+  }, []);
+  // full screen: the whole room, so the film sits side to side with black bars (never cropped) and keeps our controls
+  const fullscreen = useCallback(() => {
+    const r = room.current, v = video.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+    if (r?.requestFullscreen) r.requestFullscreen().catch(() => v?.webkitEnterFullscreen?.());
+    else v?.webkitEnterFullscreen?.(); // iPhone: the system player, which letterboxes too
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -231,7 +268,7 @@ function PlayerRoom({ film, title, revealed, onClose }: { film: Shot; title: str
   }, [close, toggle]);
 
   return (
-    <div className={`player-room ${revealed ? "is-revealed" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+    <div ref={room} className={`player-room ${revealed ? "is-revealed" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
       <button ref={closeBtn} type="button" className="player-close player-pill label" onClick={close}>
         CLOSE <span aria-hidden="true">×</span>
       </button>
@@ -242,7 +279,7 @@ function PlayerRoom({ film, title, revealed, onClose }: { film: Shot; title: str
           poster={film.src}
           playsInline
           preload="auto"
-          muted={muted}
+
           onClick={toggle}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
@@ -273,10 +310,17 @@ function PlayerRoom({ film, title, revealed, onClose }: { film: Shot; title: str
           onChange={(e) => { const v = video.current; if (v) v.currentTime = Number(e.target.value); setT(Number(e.target.value)); }}
         />
         <span className="player-tc player-tc--total">{tc(d)}</span>
-        <button type="button" className="player-pill" onClick={() => setMuted((m) => !m)} aria-pressed={!muted}>
-          SOUND <span aria-hidden="true" className="player-dot">{muted ? "○" : "●"}</span>
+        <span className="player-vol">
+          <button type="button" className="player-vol-btn" aria-label={volume > 0 ? "Mute" : "Unmute"}
+            onClick={() => setVol(volume > 0 ? 0 : lastVolume.current || 1)}>
+            <VolumeIcon level={volume} />
+          </button>
+          <input className="player-volume" type="range" min={0} max={1} step={0.01} value={volume} aria-label="Volume"
+            style={{ ["--v" as string]: `${volume * 100}%` }} onChange={(e) => setVol(Number(e.target.value))} />
+        </span>
+        <button type="button" className="player-vol-btn" aria-label="Full screen" onClick={fullscreen}>
+          <FullIcon />
         </button>
-        <button type="button" className="player-pill" onClick={() => video.current?.requestFullscreen?.()}>FULL</button>
       </div>
     </div>
   );

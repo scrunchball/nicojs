@@ -113,6 +113,9 @@ Not yet / caveats:
 ### Player and loops (D-79..D-82)
 - Camera-shutter transition into and out of the player; smaller PLAY FILM tag with an outline icon, there from the start; prettier glowing controls; loops always roll (bug fixed); festival link removed from the watch beat.
 
+### After sharing with Nico (D-83..D-86)
+- Full name in the header; every piece of the bars stays readable over the hero (sampled per corner); play-the-film with a progress bar; the scroll cue; a quieter player with a volume slider and letterboxed full screen; no outline on the film frame.
+
 ## Not started
 404 + Impressum/privacy; accessibility + SEO pass (screen reader, metadata, sitemap, social images); launch (domain, R2 for the films, headers, monitoring). Backend (CMS) to be decided., 5 timeline, 6 titles, 7 film pages, 10 responsive, 11 performance. Backend phase: 0, 1, 8, 12. Optional: 9 sound.
 

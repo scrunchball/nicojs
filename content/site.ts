@@ -83,7 +83,7 @@ function shot(folder: string, id: string, alt: string, composition: Composition,
 
 export const site = {
   name: "Nicolás J. Scatamacchia",
-  nameMark: "N. J. SCATAMACCHIA",
+  nameMark: "Nicolás J. Scatamacchia",
   email: "njs@dizsiplin.org",
   tagline: "Berlin-based director making films about hope and beauty.",
   /** One phrase per beat; the last phrase's final word is set in italic. */

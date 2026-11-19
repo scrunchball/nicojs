@@ -108,6 +108,58 @@ export function Projector() {
     const par = { x: 0, y: 0, tx: 0, ty: 0 };
     const PAR = { picture: 5, text: 3, box: 2 };
     let lastVf = -1;
+    // Play the film: scrolls at film speed (1 s of timecode per second). Any scroll of the visitor's own pauses it.
+    const autoBtn = document.querySelector<HTMLButtonElement>("[data-autoplay]");
+    const progEl = document.querySelector<HTMLElement>("[data-progress]");
+    let auto = false, autoY = 0, lastAutoNow = -1;
+    let cueGone = false; // the scroll cue disappears for good once the film has moved
+    let lightNow = "";
+    // how light the hero is behind the top and bottom bars, for the crop actually on screen (cached per size)
+    type Bands = { tl: number; tr: number; bl: number; br: number; bc: number };
+    let bandCache: (Bands & { key: string }) | null = null;
+    const heroBands = (img: HTMLImageElement, vw: number, vh: number) => {
+      const key = `${img.currentSrc}|${vw}x${vh}`;
+      if (bandCache?.key === key) return bandCache;
+      if (!img.naturalWidth) return null;
+      const [fx, fy] = (img.dataset.focal ?? "0.5,0.5").split(",").map(Number);
+      // draw the whole picture small first (drawImage crops in the file's real pixels, which for srcset images differ
+      // from naturalWidth), then work out the on-screen cover crop in this canvas's own pixels
+      const ia = img.naturalWidth / img.naturalHeight, va = vw / vh;
+      const W0 = 160, H0 = Math.max(8, Math.round(W0 / ia));
+      const c = document.createElement("canvas");
+      c.width = W0; c.height = H0;
+      const g = c.getContext("2d", { willReadFrequently: true });
+      if (!g) return null;
+      g.drawImage(img, 0, 0, W0, H0);
+      let cw = W0, ch = H0, cx = 0, cy = 0;
+      if (va > ia) { ch = W0 / va; cy = Math.max(0, Math.min(H0 - ch, fy * H0 - ch / 2)); }
+      else { cw = H0 * va; cx = Math.max(0, Math.min(W0 - cw, fx * W0 - cw / 2)); }
+      // brightness of a region given in fractions of the screen
+      const region = (x0: number, x1: number, y0: number, y1: number) => {
+        const X = Math.floor(cx + x0 * cw), W = Math.max(1, Math.floor((x1 - x0) * cw));
+        const Y = Math.floor(cy + y0 * ch), H = Math.max(1, Math.floor((y1 - y0) * ch));
+        const d = g.getImageData(X, Y, W, H).data;
+        let t = 0;
+        for (let i = 0; i < d.length; i += 4) t += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255;
+        return t / (d.length / 4);
+      };
+      // where the pieces of the bars actually sit: name top-left, nav top-right, timecode bottom-left,
+      // PROJECTOR/SOUND bottom-right, the scroll cue bottom-centre
+      bandCache = {
+        key,
+        tl: region(0, 0.42, 0, 0.09), tr: region(0.5, 1, 0, 0.09),
+        bl: region(0, 0.38, 0.9, 1), br: region(0.62, 1, 0.9, 1), bc: region(0.44, 0.56, 0.7, 1),
+      };
+      return bandCache;
+    };
+    const setAuto = (on: boolean) => {
+      auto = on;
+      autoY = window.scrollY;
+      lastAutoNow = -1;
+      autoBtn?.setAttribute("aria-pressed", String(on));
+      root.classList.toggle("autoplay", on);
+      if (on) cueGone = true;
+    };
 
     const tcEl = document.querySelector<HTMLElement>("[data-timecode]");
     const toggle = document.querySelector<HTMLButtonElement>("[data-projector-toggle]");
@@ -310,6 +362,13 @@ export function Projector() {
       lastNow = now;
       if (!pic || !grain || lost || watching) return;
       lenis?.raf(now);
+      if (auto && !watching) {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        if (lastAutoNow > 0) autoY += (Math.min(250, now - lastAutoNow) / 1000) * PX_PER_FRAME * FPS; // 192 px/s, real time
+        lastAutoNow = now;
+        if (autoY >= max) { autoY = max; setAuto(false); }
+        lenis ? lenis.scrollTo(autoY, { immediate: true, force: true }) : window.scrollTo(0, autoY);
+      }
       // parallax eases toward the pointer; the playing screen's text leans via CSS, pictures on the canvas
       if (finePointer && motion) {
         const nx = par.x + (par.tx - par.x) * 0.06, ny = par.y + (par.ty - par.y) * 0.06;
@@ -370,7 +429,24 @@ export function Projector() {
         if (vf !== lastVf) { root.style.setProperty("--vf", vf.toFixed(2)); lastVf = vf; }
       }
 
-      if (tcEl && yFrame !== lastTc) { tcEl.textContent = timecode(y); lastTc = yFrame; }
+      if (tcEl && yFrame !== lastTc) {
+        tcEl.textContent = timecode(y);
+        lastTc = yFrame;
+        const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        if (progEl) progEl.style.transform = `scaleX(${Math.min(1, y / max).toFixed(4)})`;
+      }
+      // the scroll cue: on the hero once the film has started, until the first scroll (or play)
+      if (y > 8) cueGone = true;
+      root.classList.toggle("cue-on", !cueGone && leaderDone && !!st && st.beat.index === 0);
+      // each bar reads in dark ink where the developed hero behind it is light (sampled), Bone everywhere else
+      const hero = shots.find((x) => x.timer);
+      const heroUp = !!st && st.beat.index === 0 && !!hero?.drawn && (heroShown || !motion || timerProgress(hero, now) > 0.72) && st.fade > 0.5;
+      const b = heroUp && hero ? heroBands(hero.el as HTMLImageElement, vw, vh) : null;
+      const lightKey = b ? (["tl", "tr", "bl", "br", "bc"] as const).filter((k) => b[k] > 0.55).join(" ") : "";
+      if (lightKey !== lightNow) {
+        for (const k of ["tl", "tr", "bl", "br", "bc"]) root.classList.toggle(`light-${k}`, lightKey.split(" ").includes(k));
+        lightNow = lightKey;
+      }
 
       // picture
       const shot = st?.beat.shot ? shots.find((s) => s.el === st.beat.shot) : undefined;
@@ -557,6 +633,7 @@ export function Projector() {
       const y = landing(hash);
       if (y === null) return;
       e.preventDefault();
+      stopAuto();
       const jump = () => {
         lenis ? lenis.scrollTo(y, { immediate: true, force: true }) : window.scrollTo(0, y);
         history.replaceState(null, "", hash);
@@ -570,9 +647,24 @@ export function Projector() {
       }, 190);
     };
 
+    // the visitor's own scrolling pauses "play the film" for good (until play is pressed again)
+    const SCROLL_KEYS = new Set(["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "Home", "End"]);
+    const stopAuto = () => { if (auto) setAuto(false); };
+    const onWheel = () => stopAuto();
+    const onTouch = () => stopAuto();
+    const onKeyScroll = (e: KeyboardEvent) => { if (SCROLL_KEYS.has(e.key) && !(e.target as HTMLElement).closest("button, input, a")) stopAuto(); };
+    const onScrollbar = (e: PointerEvent) => { if (e.clientX >= document.documentElement.clientWidth) stopAuto(); };
+    const onAutoBtn = () => {
+      if (auto) { setAuto(false); return; }
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      if (window.scrollY >= max - 2) { lenis ? lenis.scrollTo(0, { immediate: true, force: true }) : window.scrollTo(0, 0); }
+      setAuto(true);
+    };
+
     const onPlayer = (e: Event) => {
       watching = !!(e as CustomEvent<{ open: boolean }>).detail?.open;
       if (watching) {
+        stopAuto();
         lenis?.stop();
         if (active?.shot instanceof HTMLVideoElement) active.shot.pause();
       } else {
@@ -627,7 +719,7 @@ export function Projector() {
         cancelAnimationFrame(raf);
         raf = requestAnimationFrame(loop);
         (window as unknown as { __projector?: object }).__projector = {
-          get beats() { return beats; }, get shots() { return shots; }, get active() { return active; }, get flicker() { return flicker.value; }, contexts: 2,
+          get beats() { return beats; }, get shots() { return shots; }, get active() { return active; }, get flicker() { return flicker.value; }, get bands() { return bandCache; }, contexts: 2,
         };
       } catch (e) {
         console.warn("[projector] engine unavailable, keeping the DOM page", e);
@@ -654,7 +746,7 @@ export function Projector() {
       pic?.dispose(); grain?.dispose();
       pic = null; grain = null;
       lenis?.destroy(); lenis = null;
-      root.classList.remove("projector-on", "film", "on-red", "countdown-on");
+      root.classList.remove("projector-on", "film", "on-red", "countdown-on", "autoplay", "cue-on", "light-tl", "light-tr", "light-bl", "light-br", "light-bc");
       root.style.removeProperty("--vf");
       root.style.removeProperty("--par-x");
       root.style.removeProperty("--par-y");
@@ -677,6 +769,11 @@ export function Projector() {
     }
     toggle?.addEventListener("click", onToggle);
     window.addEventListener("player", onPlayer);
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("touchstart", onTouch, { passive: true });
+    window.addEventListener("keydown", onKeyScroll);
+    window.addEventListener("pointerdown", onScrollbar);
+    autoBtn?.addEventListener("click", onAutoBtn);
     window.addEventListener("pointermove", onPointer, { passive: true });
     document.addEventListener("click", onNav);
     document.addEventListener("focusin", onFocus);
@@ -690,6 +787,11 @@ export function Projector() {
       }
       toggle?.removeEventListener("click", onToggle);
       window.removeEventListener("player", onPlayer);
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouch);
+      window.removeEventListener("keydown", onKeyScroll);
+      window.removeEventListener("pointerdown", onScrollbar);
+      autoBtn?.removeEventListener("click", onAutoBtn);
       window.removeEventListener("pointermove", onPointer);
       document.removeEventListener("click", onNav);
       document.removeEventListener("focusin", onFocus);
