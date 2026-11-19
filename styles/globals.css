@@ -497,3 +497,10 @@ html.film .scene--reel .roll-box { top: calc(var(--box-y) + 22svh); height: calc
   html.film .scene--reel .roll-box { top: calc(var(--box-y) + 19svh); height: calc(100svh - 2 * var(--box-y) - 24svh); }
 }
 @media (max-width: 809px) { .scroll-cue { bottom: calc(var(--s3) + 64px); } .scroll-cue-line { height: 11svh; } }
+/* wider roll: the box fills the reel container, each line stays on one line, and the dot leader runs longer (D-89) */
+@media (min-width: 810px) {
+  html.film .scene--reel .roll-box { width: min(1080px, calc(100vw - 2 * var(--box-x) - 12vw)); }
+  .scene--reel .roll-item { grid-template-columns: 56px 1fr auto; gap: var(--s4); }
+  .scene--reel .roll-text .festival { max-width: none; white-space: nowrap; }
+  .scene--reel .roll-text p { white-space: nowrap; }
+}
