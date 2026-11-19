@@ -82,7 +82,7 @@ export function Picture({ shot, priority = false, sizes }: { shot: Shot; priorit
 export function Window({ shot, sizes }: { shot: Shot; sizes?: string }) {
   const size = shot.composition === "small-window" ? "small" : "large";
   return (
-    <div className={`window window--${size} window--${shot.side ?? "center"}`}>
+    <div className={`window window--${size} window--${shot.side ?? "center"}`} style={{ ["--ar" as string]: (shot.width / shot.height).toFixed(4) }}>
       <Picture shot={shot} sizes={sizes} />
     </div>
   );

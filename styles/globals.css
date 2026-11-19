@@ -504,3 +504,15 @@ html.film .scene--reel .roll-box { top: calc(var(--box-y) + 22svh); height: calc
   .scene--reel .roll-text .festival { max-width: none; white-space: nowrap; }
   .scene--reel .roll-text p { white-space: nowrap; }
 }
+/* opening windows never run off screen: the width also follows the picture's shape against the screen height (D-91) */
+.frame:not(.frame--corner) > .window { padding-block: 0; }
+.frame:not(.frame--corner) > .window--large { width: min(62%, calc(66svh * var(--ar, 1.66))); }
+.frame:not(.frame--corner) > .window--small { width: min(34%, calc(52svh * var(--ar, 1.37))); }
+@media (max-width: 809px) {
+  .frame:not(.frame--corner) > .window--large { width: min(86%, calc(56svh * var(--ar, 1.66))); }
+  .frame:not(.frame--corner) > .window--small { width: min(60%, calc(44svh * var(--ar, 1.37))); }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .frame:not(.frame--corner) > .window--large { width: min(56vw, calc(70svh * var(--ar, 1.66))); }
+  .frame:not(.frame--corner) > .window--small { width: min(34vw, calc(64svh * var(--ar, 1.37))); }
+}
