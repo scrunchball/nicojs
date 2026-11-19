@@ -80,6 +80,7 @@ function useShutter() {
   const cover = useCallback(async () => {
     const p = el.current?.firstElementChild as HTMLElement | null;
     if (!p || reduced) return;
+    window.dispatchEvent(new CustomEvent("sfx", { detail: "shutter" })); // a quiet camera shutter (if SOUND is on)
     el.current!.classList.add("is-on");
     await p.animate([{ transform: "translateY(-115%) rotate(-2.2deg)" }, { transform: "translateY(0%) rotate(-2.2deg)" }],
       { duration: ROLL_MS, easing: "cubic-bezier(0.55, 0, 0.35, 1)", fill: "forwards" }).finished;

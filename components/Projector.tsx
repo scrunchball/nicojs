@@ -103,6 +103,8 @@ export function Projector() {
     let builds: (Build & { beat?: Beat })[] = [];
     const NAME_PRINT_AFTER = 3; // film frames of scroll before the name starts printing
     let watching = false; // the film player is open: the screening rests
+    let lastSfxY = 0, lastReelHalf = "", lastSeqSfx = 0;
+    const sfx = () => window.dispatchEvent(new CustomEvent("sfx", { detail: "shutter" }));
     // mouse parallax: everything but the menu leans a few px toward the pointer (fine pointers only)
     const finePointer = window.matchMedia("(pointer: fine)").matches;
     const par = { x: 0, y: 0, tx: 0, ty: 0 };
@@ -415,6 +417,13 @@ export function Projector() {
         const into = Math.floor((y - b0.sceneStart) / PX_PER_FRAME) * PX_PER_FRAME;
         reveal = Math.min(1, Math.max(0, into / (vh * 0.22)));
       }
+      const fwd = y > lastSfxY; lastSfxY = y;
+      // a quiet shutter sound as a reel's shutter starts to roll (entering the reel going forward; if SOUND is on)
+      const reelKey = b0?.reel ? b0.scene : "";
+      if (reelKey !== lastReelHalf) {
+        if (reelKey && reveal < 1 && fwd) sfx();
+        lastReelHalf = reelKey;
+      }
       if (b0) b0.frame.style.clipPath = reveal < 1 ? `inset(0 0 ${((1 - reveal) * 100).toFixed(2)}% 0)` : "";
 
       // viewfinder: thin marks draw in at the start of each beat and out at its end (not in reels or on red)
@@ -491,6 +500,8 @@ export function Projector() {
           const prev = fresh && k > 0 ? shots.find((x) => x.el === seq.shots[imgOf(k - 1)]) : undefined;
           const wipeT = 0.22;
           const dev = !motion || !fresh ? 1 : k === 0 ? Math.min(1, local / 0.45) : Math.min(1, Math.max(0, (local - 0.06) / 0.5));
+          if (prev && motion && local >= wipeT * 0.4 && local < wipeT && k > lastSeqSfx && fwd) { lastSeqSfx = k; sfx(); }
+          if (k < lastSeqSfx) lastSeqSfx = k - 1;
           if (prev && local < wipeT && motion) {
             push(prev, 1, { zoom: 1 });
             if (cur) push(cur, dev, { wipe: local / wipeT, zoom: 1 });

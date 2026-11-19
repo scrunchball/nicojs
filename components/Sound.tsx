@@ -13,6 +13,8 @@ const LEVEL = 0.6; // running level: the loop is mastered at -26 LUFS, so the si
 const IDLE = 0.38; // share of the level at rest
 const FILM_SPEED = 192; // px of scroll per second at 24 fps (8 px per frame)
 const KEY = "nicojs-sound";
+const SHUTTERS = [1, 2, 3, 4, 5].map((n) => `/media/sound/shutter-${n}.m4a`);
+const SHUTTER_LEVEL = 0.2; // the clicks peak at -3 dBFS; this puts them around -17 dBFS: present, never sharp
 
 export function Sound() {
   useEffect(() => {
@@ -35,6 +37,30 @@ export function Sound() {
       btn.setAttribute("aria-pressed", String(on));
       if (dot) dot.textContent = on ? "●" : "○";
     };
+
+    let shutters: Promise<AudioBuffer[]> | null = null;
+    let lastShutter = -1;
+    const loadShutters = (c: AudioContext) =>
+      (shutters ??= Promise.all(SHUTTERS.map((u) => fetch(u).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)))));
+    /** A camera shutter for an interaction (opening the player, a shutter on screen): a different one each time. */
+    const onSfx = async () => {
+      if (!on || !ctx || document.hidden || ctx.state !== "running") return;
+      const bufs = await loadShutters(ctx);
+      let i = Math.floor(Math.random() * bufs.length);
+      if (i === lastShutter) i = (i + 1) % bufs.length;
+      lastShutter = i;
+      const g = ctx.createGain();
+      g.gain.value = SHUTTER_LEVEL * (0.85 + Math.random() * 0.15);
+      g.connect(ctx.destination);
+      const b = ctx.createBufferSource();
+      b.buffer = bufs[i];
+      b.playbackRate.value = 0.96 + Math.random() * 0.08;
+      b.connect(g);
+      b.onended = () => { b.disconnect(); g.disconnect(); };
+      b.start();
+      sfxCount++;
+    };
+    let sfxCount = 0;
 
     const load = (c: AudioContext) =>
       (buffer ??= fetch(SRC).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)));
@@ -71,6 +97,7 @@ export function Sound() {
       ctx ??= new AC();
       if (!gain) { gain = ctx.createGain(); gain.gain.value = 0; gain.connect(ctx.destination); }
       await ctx.resume();
+      void loadShutters(ctx).catch(() => {});
       const buf = await load(ctx);
       if (!on) return;
       if (!src) {
@@ -109,7 +136,7 @@ export function Sound() {
       window.addEventListener("keydown", resume, true);
     }
     sync();
-    (window as unknown as { __sound: object }).__sound = { get on() { return on; }, get run() { return run; }, get target() { return target(); }, get state() { return ctx?.state; }, get playing() { return !!src; } };
+    (window as unknown as { __sound: object }).__sound = { get on() { return on; }, get run() { return run; }, get target() { return target(); }, get state() { return ctx?.state; }, get playing() { return !!src; }, get sfx() { return sfxCount; } };
 
     const onScroll = () => { if (on) kick(); };
     const onPlayer = (e: Event) => { watching = !!(e as CustomEvent<{ open: boolean }>).detail?.open; if (on) kick(); };
@@ -120,12 +147,15 @@ export function Sound() {
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("player", onPlayer);
+    const sfxListener = () => { void onSfx().catch(() => {}); };
+    window.addEventListener("sfx", sfxListener);
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
       btn.removeEventListener("click", onClick);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("player", onPlayer);
+      window.removeEventListener("sfx", sfxListener);
       window.removeEventListener("pointerdown", resume, true);
       window.removeEventListener("keydown", resume, true);
       document.removeEventListener("visibilitychange", onVis);
