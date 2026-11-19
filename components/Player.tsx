@@ -171,12 +171,15 @@ export function WatchFilm({ film, title, label }: { film: Shot; title: string; l
       <button
         ref={btn}
         type="button"
-        className={`play-tag label ${fine ? "is-cursor" : "is-static"}`}
+        className={`play-tag ${fine ? "is-cursor" : "is-static"}`}
         onClick={(e) => { e.stopPropagation(); start(); }}
         aria-haspopup="dialog"
       >
-        <PlayIcon size={10} />
-        <span>{label}</span>
+        {/* the play symbol sits behind the words, both centred on the same point */}
+        <svg className="play-tag-icon" viewBox="0.3 0 12 14" aria-hidden="true">
+          <path d="M2.2 1.9 L10.4 7 L2.2 12.1 Z" fill="none" stroke="currentColor" strokeWidth="0.55" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        </svg>
+        <span className="play-tag-text">{label}</span>
       </button>
       <noscript>
         <a className="label link" href={film.loop}>{label} ↗</a>
@@ -298,18 +301,32 @@ function PlayerRoom({ film, title, revealed, onClose }: { film: Shot; title: str
           {playing ? <PauseIcon /> : <PlayIcon />}
         </button>
         <span className="player-tc">{tc(t)}</span>
-        <input
-          className="player-scrub"
-          type="range"
-          min={0}
-          max={d || 0}
-          step={1 / FPS}
-          value={t}
-          aria-label="Position"
-          aria-valuetext={tc(t)}
-          style={{ ["--p" as string]: d ? `${(t / d) * 100}%` : "0%" }}
-          onChange={(e) => { const v = video.current; if (v) v.currentTime = Number(e.target.value); setT(Number(e.target.value)); }}
-        />
+        <span className="player-scrub-wrap" style={{ ["--pf" as string]: d ? (t / d).toFixed(4) : "0" }}>
+          <input
+            className="player-scrub"
+            type="range"
+            min={0}
+            max={d || 0}
+            step={1 / FPS}
+            value={t}
+            aria-label="Position"
+            aria-valuetext={tc(t)}
+            style={{ ["--p" as string]: d ? `${(t / d) * 100}%` : "0%" }}
+            onChange={(e) => { const v = video.current; if (v) v.currentTime = Number(e.target.value); setT(Number(e.target.value)); }}
+          />
+          {/* the playhead: a small red dot whose edges ripple slowly (an animated displacement), with a soft glow */}
+          <svg className="scrub-knob" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+            <defs>
+              <filter id="knob-warp" x="-30%" y="-30%" width="160%" height="160%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="2" seed="4" result="n">
+                  {!window.matchMedia("(prefers-reduced-motion: reduce)").matches && <animate attributeName="baseFrequency" dur="5.2s" values="0.45;0.75;0.55;0.85;0.45" repeatCount="indefinite" />}
+                </feTurbulence>
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
+            </defs>
+            <circle cx="9" cy="9" r="5.2" fill="currentColor" filter="url(#knob-warp)" />
+          </svg>
+        </span>
         <span className="player-tc player-tc--total">{tc(d)}</span>
         <span className="player-vol">
           <button type="button" className="player-vol-btn" aria-label={volume > 0 ? "Mute" : "Unmute"}

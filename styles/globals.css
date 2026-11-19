@@ -522,3 +522,21 @@ html.film .scene--reel .roll-box { top: calc(var(--box-y) + 22svh); height: calc
 html.sound-ready .sound-toggle { display: inline-flex; }
 html.sound-ready .sound-static { display: none; }
 .sound-toggle:hover { color: var(--bone); }
+/* PLAY FILM, round 3 (D-94): no box. "Play Film" in the title serif, medium-large, in Safelight red, with an outline
+   play symbol behind it; the words and the symbol share one centre wherever the tag goes */
+.play-tag { display: grid; place-items: center; background: none; border: 0; border-radius: 0; padding: 0; box-shadow: none;
+  font-family: var(--font-serif); font-weight: 400; font-size: clamp(34px, 5vw, 84px); line-height: 1; letter-spacing: -0.01em;
+  text-transform: none; color: var(--safelight-text); }
+.play-tag > * { grid-area: 1 / 1; }
+.play-tag-icon { height: 2.3em; width: auto; overflow: visible; opacity: 0.5; stroke-width: 1.3px; }
+.play-tag-icon path { stroke-width: 1.3px; }
+.play-tag-text { position: relative; text-shadow: 0 0 18px rgb(196 42 26 / 0.35); }
+/* the playhead (D-94): the native thumb stays for the hand but is invisible; a small red dot with rippling edges
+   and only a little glow travels with it */
+.player-scrub-wrap { position: relative; flex: 0 1 32%; min-width: 160px; display: flex; align-items: center; }
+.player-scrub-wrap .player-scrub { flex: 1 1 auto; min-width: 0; width: 100%; filter: none; }
+.player-scrub::-webkit-slider-thumb { background: transparent; box-shadow: none; }
+.player-scrub::-moz-range-thumb { background: transparent; box-shadow: none; }
+.scrub-knob { position: absolute; top: 50%; left: calc(5.5px + (100% - 11px) * var(--pf, 0)); translate: -50% -50%; pointer-events: none;
+  color: var(--safelight-text); filter: drop-shadow(0 0 3px rgb(232 68 30 / 0.45)); overflow: visible; }
+@media (max-width: 809px) { .player-scrub-wrap { order: 10; flex-basis: 100%; } }
