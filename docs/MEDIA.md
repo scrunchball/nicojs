@@ -84,3 +84,6 @@ ffmpeg -i master.mp4 -vf "format=yuv420p" -c:v libx264 -preset slow -profile:v h
 ffmpeg -i master.mp4 -vf "scale=1280:-2,format=yuv420p" -c:v libx264 -preset slow -profile:v high -crf 22 -maxrate 3M -bufsize 6M -c:a aac -b:a 160k -ac 2 -movflags +faststart film-720.mp4
 ```
 Single uploads through the Cloudflare API are limited to ~300 MB per file.
+
+## Sound
+`public/media/sound/projector.m4a`: the projector loop (from Adam's 16mmFilmProjectorRunsLightReelScrapes WAV). To change the level, edit `LEVEL` and `IDLE` in `components/Sound.tsx`.

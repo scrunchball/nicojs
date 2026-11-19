@@ -71,7 +71,10 @@ export function Chrome({ locale }: { locale: string }) {
         <button type="button" className="projector-toggle" data-projector-toggle aria-pressed="true">
           {t("markers.projector")} <i aria-hidden="true" data-projector-dot>●</i>
         </button>
-        <span aria-hidden="true">{t("markers.sound")} <i>○</i></span>
+        <span className="sound-static" aria-hidden="true">{t("markers.sound")} <i>○</i></span>
+        <button type="button" className="sound-toggle" data-sound-toggle aria-pressed="false">
+          {t("markers.sound")} <i aria-hidden="true" data-sound-dot>○</i>
+        </button>
       </div>
       {/* viewfinder: thin corner marks and edge ticks that draw in and out with each beat (film mode only) */}
       <div className="viewfinder" aria-hidden="true">

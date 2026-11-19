@@ -516,3 +516,9 @@ html.film .scene--reel .roll-box { top: calc(var(--box-y) + 22svh); height: calc
   .frame:not(.frame--corner) > .window--large { width: min(56vw, calc(70svh * var(--ar, 1.66))); }
   .frame:not(.frame--corner) > .window--small { width: min(34vw, calc(64svh * var(--ar, 1.37))); }
 }
+/* SOUND: a real toggle once the sound layer is ready (D-92) */
+.sound-toggle { display: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit;
+  background: none; border: 0; padding: 0; cursor: pointer; }
+html.sound-ready .sound-toggle { display: inline-flex; }
+html.sound-ready .sound-static { display: none; }
+.sound-toggle:hover { color: var(--bone); }
